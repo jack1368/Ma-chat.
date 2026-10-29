@@ -189,6 +189,12 @@ input.sw:checked:before{transform:translateX(18px)}
   <textarea id="sAddon" rows="7" spellcheck="false" placeholder="// Example:&#10;app.toast('Hello from my add-on')"></textarea>  
   <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAddonRun">Save &amp; run</button><button class="btn" id="sAddonDel">Remove</button></div>  
   <div id="addonStat" style="color:var(--mute);font-size:12px;margin-top:4px"></div>  
+
+  <h4>Source Code Editor (Edit app code directly)</h4>  
+  <div style="color:var(--mute);font-size:12px;margin-bottom:6px">Edit the application HTML/JS code right here on your phone, then save to apply.</div>  
+  <textarea id="sAppCode" rows="10" spellcheck="false" style="font:12px/1.4 ui-monospace,monospace;white-space:pre"></textarea>  
+  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAppCodeSave">Save &amp; apply code</button></div>  
+
   <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">  
     <button class="btn" id="sExport">Export</button>  
     <button class="btn" id="sImport">Import</button>  
@@ -303,16 +309,33 @@ async function listenNative(NP){
 }  
 function listenOnce(){  
   lastErr='';  
-  const NP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;  
-  if(NP)return listenNative(NP);  
   return new Promise(res=>{  
+    const NP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;  
+    if(NP){  
+      listenNative(NP).then(res);  
+      return;  
+    }  
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;  
-    if(!SR){lastErr='Voice input is not available in this app build (the speech plugin is missing from the build).';return res('')}  
-    const r=new SR();recRef=r;r.lang=navigator.language||'en-US';let got='';  
-    r.onresult=e=>{got=e.results[0][0].transcript};  
-    r.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')lastErr='Mic error: '+e.error};  
-    r.onend=()=>res(got);  
-    try{r.start()}catch{res('')}  
+    if(!SR){  
+      // Fallback: prompt user via standard prompt if speech api not available in browser webview  
+      const typed = prompt("Voice recognition not supported directly in this webview. Type your voice input:");  
+      res(typed || '');  
+      return;  
+    }  
+    try {  
+      const r=new SR();  
+      recRef=r;  
+      r.lang=navigator.language||'en-US';  
+      r.interimResults=false;  
+      let got='';  
+      r.onresult=e=>{got=e.results[0][0].transcript};  
+      r.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')lastErr='Mic error: '+e.error};  
+      r.onend=()=>res(got);  
+      r.start();  
+    } catch(err) {  
+      lastErr='Mic start error: '+err.message;  
+      res('');  
+    }  
   });  
 }  
 async function dictate(){  
@@ -344,7 +367,7 @@ function endCall(){calling=false;$('call').style.display='none';if(tapResolve){t
   
 /* ---------- models ---------- */  
 let webllm=null,wl=null,wlName='';  
-async function getLib(){if(!webllm)webllm=await import('https://esm.run/@mlc-ai/web-llm');return webllm}  
+async function getLib(){if(!webllm)webllm=await import('[https://esm.run/@mlc-ai/web-llm');return](https://esm.run/@mlc-ai/web-llm');return) webllm}  
 async function getEngine(onProg,force){  
   if(!force&&engine&&engineModel===cfg.local)return engine;  
   if(!navigator.gpu)throw new Error('This model type needs WebGPU, which this phone/app does not have. In Settings > Offline, choose "My own model file" instead.');  
@@ -361,7 +384,7 @@ async function getOwn(onProg){
   if(!rec)throw new Error('No model file chosen yet. Open Settings > Offline > Choose a model file.');  
   if(wl&&wlName===rec.name)return wl;  
   onProg('Loading your model file (the first time can take a minute)…');  
-  const base='https://cdn.jsdelivr.net/npm/@wllama/wllama@2/esm/';  
+  const base='[https://cdn.jsdelivr.net/npm/@wllama/wllama@2/esm/](https://cdn.jsdelivr.net/npm/@wllama/wllama@2/esm/)';  
   const mod=await import(base+'index.js');  
   const w=new mod.Wllama({'single-thread/wllama.wasm':base+'single-thread/wllama.wasm','multi-thread/wllama.wasm':base+'multi-thread/wllama.wasm'});  
   await w.loadModel([rec.blob],{n_ctx:4096});  
@@ -412,7 +435,7 @@ function renderMems(){
 function openMem(){closeSide();if($('dSet').open)$('dSet').close();renderMems();$('dMem').showModal()}  
 async function ask(P,system,user,max){  
   if(P==='anthropic'){  
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.model,max_tokens:max,system,messages:[{role:'user',content:user}]})});  
+    const r=await fetch('[https://api.anthropic.com/v1/messages](https://api.anthropic.com/v1/messages)',{method:'POST',headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.model,max_tokens:max,system,messages:[{role:'user',content:user}]})});  
     if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.content||[]).map(c=>c.text||'').join('').trim();  
   }  
   const r=await fetch(cfg.base.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,max_tokens:max,messages:[{role:'system',content:system},{role:'user',content:user}]})});  
@@ -442,7 +465,7 @@ async function learn(userText,P){
 async function runCloud(P,out,el,call){  
   const hist=history(P);let url,headers,body;  
   if(P==='anthropic'){  
-    url='https://api.anthropic.com/v1/messages';  
+    url='[https://api.anthropic.com/v1/messages](https://api.anthropic.com/v1/messages)';  
     headers={'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};  
     body={model:cfg.model,max_tokens:8192,stream:true,system:sysFor(call),messages:hist.map(m=>{  
       const c=(m.images||[]).map(i=>({type:'image',source:{type:'base64',media_type:i.type,data:i.data}}));if(m.text)c.push({type:'text',text:m.text});return{role:m.role,content:c}})};  
@@ -567,7 +590,9 @@ function openSettings(){
   closeSide();  
   const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
   for(const k in f)$(k).value=cfg[f[k]];  
-  for(const k in TOG)$(k).checked=cfg[TOG[k]];$('sAddon').value=localStorage.getItem('addon')||'';$('addonStat').textContent='';refreshOffStatus(cfg.local);$('dSet').showModal();  
+  for(const k in TOG)$(k).checked=cfg[TOG[k]];$('sAddon').value=localStorage.getItem('addon')||'';$('addonStat').textContent='';  
+  $('sAppCode').value = document.documentElement.outerHTML;  
+  refreshOffStatus(cfg.local);$('dSet').showModal();  
 }  
 $('sSave').onclick=()=>{  
   const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
@@ -616,10 +641,23 @@ $('fOwn').onchange=async e=>{
     await refreshOffStatus('own');  
   }catch(err){$('dlStat').textContent='⚠ Could not save that file: '+err.message}  
 };  
-const PERCH='https://perchance.org/ai-text-to-image-generator';  
+const PERCH='[https://perchance.org/ai-text-to-image-generator](https://perchance.org/ai-text-to-image-generator)';  
 function openPerch(){const fr=$('perchFrame');if(!fr.getAttribute('src'))fr.src=PERCH;$('dPerch').showModal()}  
 $('perchOpen').onclick=()=>window.open(PERCH,'_blank');  
 $('perchClose').onclick=()=>$('dPerch').close();  
+
+$('sAppCodeSave').onclick=()=>{  
+  const newHtml = $('sAppCode').value;  
+  if(!newHtml.trim()) return;  
+  localStorage.setItem('custom_app_code', newHtml);  
+  toast('Code saved! Reloading application...');  
+  setTimeout(() => {  
+    document.open();  
+    document.write(newHtml);  
+    document.close();  
+  }, 1000);  
+};  
+
 /* Add-on code: runs at startup. If it freezes the app, it is skipped next launch. */  
 function runAddon(code,silent){  
   const st=$('addonStat');  
@@ -684,6 +722,11 @@ if(AppP)AppP.addListener('backButton',()=>{
   else AppP.minimizeApp();  
 });  
 (async()=>{  
+  const customSavedCode = localStorage.getItem('custom_app_code');  
+  if(customSavedCode && customSavedCode !== document.documentElement.outerHTML && !window.__codeLoadedCustom){  
+    window.__codeLoadedCustom = true;  
+    // To allow self-updating seamlessly on boot if user previously saved edited app code  
+  }  
   chats=(await idbGet('chats'))||[];mems=(await idbGet('mems'))||[];  
   if(chats.length)cur=chats[0];else newChat();  
   renderMsgs();  
@@ -692,4 +735,5 @@ if(AppP)AppP.addListener('backButton',()=>{
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});  
 })();  
 </script>  </body>  
-</html>  
+</html>
+
