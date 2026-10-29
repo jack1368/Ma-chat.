@@ -1,3 +1,4 @@
+
 <!doctype html>
 
 <html lang="en">  
@@ -6,7 +7,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">  
 <meta name="theme-color" content="#faf9f5">  
 <link rel="manifest" href="manifest.json">  
-<title>MyChat</title>  
+<title id="appPageTitle">MyChat</title>  
 <style>  
 :root{--bg:#faf9f5;--panel:#f0eee6;--card:#fff;--text:#1f1e1d;--mute:#73726c;--line:#e3e0d5;--accent:#c96442;--user:#ece9de;--code:#2b2a28}  
 @media (prefers-color-scheme:dark){:root{--bg:#262624;--panel:#1f1e1d;--card:#30302e;--text:#eeece4;--mute:#a09f97;--line:#3d3d3a;--user:#393937}}  
@@ -100,7 +101,7 @@ input.sw:checked:before{transform:translateX(18px)}
 <div id="scrim"></div>  
 <div id="toast"></div>  
 <aside id="side">  
-  <div class="sh"><span>MyChat</span><button class="ib" id="sideClose">✕</button></div>  
+  <div class="sh"><span id="sideAppTitle">MyChat</span><button class="ib" id="sideClose">✕</button></div>  
   <button class="wide acc" id="sNew">＋ New chat</button>  
   <input id="search" placeholder="Search chats">  
   <div id="list"></div>  
@@ -151,6 +152,11 @@ input.sw:checked:before{transform:translateX(18px)}
   <div style="color:var(--mute);font-size:12px;margin-top:6px">Free website, needs internet. If the page stays blank, tap "Open in browser".</div>  
 </dialog>  <dialog id="dMem"><h3 style="margin:0 0 4px">Memory</h3><div style="color:var(--mute);font-size:13px">Saved on this phone only. Say "remember that…" in any chat to add one.</div><div id="memList" style="margin:10px 0;max-height:50dvh;overflow-y:auto"></div><div style="display:flex;gap:8px"><input id="memIn" placeholder="Add a memory"><button class="btn p" id="memAdd">Add</button></div><div style="display:flex;justify-content:space-between;margin-top:12px"><button class="btn" id="memClear">Clear all</button><button class="btn" id="memClose">Close</button></div></dialog>  <dialog id="dSet">  
   <h3 style="margin:0">Settings</h3>  
+  
+  <h4>App Identity</h4>  
+  <label>App Name</label>  
+  <input id="sAppName" placeholder="MyChat">  
+
   <h4>Toggles</h4>  
   <div class="row"><div>Use memory<small>Remember things about you across all chats</small></div><input class="sw" id="sMem" type="checkbox"></div>  
   <div class="row"><div>Auto-remember<small>Learn new facts about you as you chat (uses a small extra request)</small></div><input class="sw" id="sLearn" type="checkbox"></div>  
@@ -190,10 +196,15 @@ input.sw:checked:before{transform:translateX(18px)}
   <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAddonRun">Save &amp; run</button><button class="btn" id="sAddonDel">Remove</button></div>  
   <div id="addonStat" style="color:var(--mute);font-size:12px;margin-top:4px"></div>  
 
-  <h4>Source Code Editor (Edit app code directly)</h4>  
-  <div style="color:var(--mute);font-size:12px;margin-bottom:6px">Edit the application HTML/JS code right here on your phone, then save to apply.</div>  
+  <h4>Edit Code Files (Local)</h4>  
+  <div style="color:var(--mute);font-size:12px;margin-bottom:6px">Select a file below to view or edit its source code directly on your device.</div>  
+  <label>File to edit</label>  
+  <select id="sFileSelect">  
+    <option value="index">index.html (App Code)</option>  
+    <option value="sw">sw.js (Service Worker)</option>  
+  </select>  
   <textarea id="sAppCode" rows="10" spellcheck="false" style="font:12px/1.4 ui-monospace,monospace;white-space:pre"></textarea>  
-  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAppCodeSave">Save &amp; apply code</button></div>  
+  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAppCodeSave">Save &amp; apply selected file</button></div>  
 
   <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">  
     <button class="btn" id="sExport">Export</button>  
@@ -211,11 +222,21 @@ const DB=new Promise(r=>{const q=indexedDB.open('mychat',1);q.onupgradeneeded=()
 const idbGet=async k=>{const db=await DB;return new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result)})};  
 const idbSet=async(k,v)=>{const db=await DB;return new Promise(r=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r;t.onerror=r;t.onabort=r})};  
 const idbPut=async(k,v)=>{const db=await DB;return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('storage is full or blocked'))})};  
-const DEF={prov:'anthropic',key:'',model:'claude-sonnet-5-5',base:'https://api.openai.com/v1',sys:'You are a helpful assistant. When asked for code, write complete, working code in fenced code blocks.',auto:true,local:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',mbase:'https://api.openai.com/v1',mkey:'',img:'gpt-image-1',vid:'sora-2',speak:false,mem:true,learn:true,sum:true,fam:false,concise:false};  
+const DEF={prov:'anthropic',key:'',model:'claude-sonnet-5-5',base:'https://api.openai.com/v1',sys:'You are a helpful assistant. When asked for code, write complete, working code in fenced code blocks.',auto:true,local:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',mbase:'https://api.openai.com/v1',mkey:'',img:'gpt-image-1',vid:'sora-2',speak:false,mem:true,learn:true,sum:true,fam:false,concise:false,appName:'MyChat'};  
 let cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('cfg'))||{}}catch{return{}}})());  
 let chats=[],mems=[],cur=null,pending=[],docs=[],mode='chat',busy=false,calling=false,ctrl=null,lastErr='',engine=null,engineModel='';  
 const saveChats=()=>idbSet('chats',chats);  
-const saveCfg=()=>localStorage.setItem('cfg',JSON.stringify(cfg));  
+const saveCfg=()=>{  
+  localStorage.setItem('cfg',JSON.stringify(cfg));  
+  applyAppName();  
+};  
+
+function applyAppName(){  
+  const name = cfg.appName || 'MyChat';  
+  $('sideAppTitle').textContent = name;  
+  $('appPageTitle').textContent = name;  
+  $('input').placeholder = mode==='chat' ? 'Message ' + name : 'Describe the '+mode+'…';  
+}  
   
 /* ---------- rendering ---------- */  
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));  
@@ -274,7 +295,7 @@ function renderList(){
 function openSide(){renderList();$('side').classList.add('open');$('scrim').style.display='block'}  
 function closeSide(){$('side').classList.remove('open');$('scrim').style.display='none'}  
 function newChat(){if(cur&&!cur.msgs.length){closeSide();return}cur={id:Date.now(),title:'New chat',msgs:[]};chats.unshift(cur);saveChats();closeSide();renderMsgs()}  
-function setMode(m){mode=m;const c=$('modeChip');c.style.display=m==='chat'?'none':'';c.textContent=(m==='image'?'🎨 Image':'🎬 Video')+' ✕';$('input').placeholder=m==='chat'?'Message MyChat':'Describe the '+m+'…'}  
+function setMode(m){mode=m;const c=$('modeChip');c.style.display=m==='chat'?'none':'';c.textContent=(m==='image'?'🎨 Image':'🎬 Video')+' ✕';applyAppName()}  
 function setSend(){$('send').textContent=busy?'■':'↑'}  
 function autosize(){const i=$('input');i.style.height='auto';i.style.height=Math.min(i.scrollHeight,150)+'px'}  
   
@@ -317,8 +338,7 @@ function listenOnce(){
     }  
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;  
     if(!SR){  
-      // Fallback: prompt user via standard prompt if speech api not available in browser webview  
-      const typed = prompt("Voice recognition not supported directly in this webview. Type your voice input:");  
+      const typed = prompt("Voice recognition not supported directly in this webview. Type your speech input:");  
       res(typed || '');  
       return;  
     }  
@@ -395,7 +415,6 @@ function effProv(){
   if(cfg.auto&&(!navigator.onLine||!cfg.key))return 'local';  
   return cfg.prov;  
 }  
-/* Unlimited chat: nothing is capped; only what is SENT is trimmed to fit the model's context window. */  
 function history(P){  
   const budget=P==='local'?5000:60000;let used=0;const sel=[];  
   const ms=cur.msgs.map((m,i)=>({m,i})).filter(x=>!x.m.err&&(x.m.text||(x.m.images&&x.m.images.length)));  
@@ -441,7 +460,6 @@ async function ask(P,system,user,max){
   const r=await fetch(cfg.base.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,max_tokens:max,messages:[{role:'system',content:system},{role:'user',content:user}]})});  
   if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.choices[0].message.content||'').trim();  
 }  
-/* Long-chat memory: older messages that no longer fit are folded into a running summary. */  
 async function ensureSummary(P){  
   if(!cfg.sum||P==='local'||!cfg.key)return;  
   history(P);const end=history.start,from=cur.sumUpTo||0;  
@@ -453,7 +471,6 @@ async function ensureSummary(P){
     if(t){cur.summary=t;cur.sumUpTo=end}  
   }catch{}  
 }  
-/* Cross-chat memory: pull durable facts about the user out of what they said. */  
 async function learn(userText,P){  
   if(!cfg.mem||!cfg.learn||P==='local'||!cfg.key||userText.length<8)return;  
   try{  
@@ -585,17 +602,32 @@ async function send(o={}){
   return out.text;  
 }  
   
-/* ---------- settings ---------- */  
+/* ---------- settings & code file handling ---------- */  
+const DEFAULT_SW_CODE = `// Service Worker\nself.addEventListener('install', e => e.waitUntil(self.skipWaiting()));\nself.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\nself.addEventListener('fetch', e => {\n  // Default cache fallback strategies can go here\n});`;
+
+function loadCodeForSelection(){  
+  const sel = $('sFileSelect').value;  
+  if(sel === 'sw'){  
+    $('sAppCode').value = localStorage.getItem('custom_sw_code') || DEFAULT_SW_CODE;  
+  } else {  
+    $('sAppCode').value = document.documentElement.outerHTML;  
+  }  
+}  
+
 function openSettings(){  
   closeSide();  
-  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
-  for(const k in f)$(k).value=cfg[f[k]];  
+  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid',sAppName:'appName'};  
+  for(const k in f)$(k).value=cfg[f[k]]||'';  
   for(const k in TOG)$(k).checked=cfg[TOG[k]];$('sAddon').value=localStorage.getItem('addon')||'';$('addonStat').textContent='';  
-  $('sAppCode').value = document.documentElement.outerHTML;  
+  
+  loadCodeForSelection();  
   refreshOffStatus(cfg.local);$('dSet').showModal();  
 }  
+
+$('sFileSelect').onchange = loadCodeForSelection;  
+
 $('sSave').onclick=()=>{  
-  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
+  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid',sAppName:'appName'};  
   for(const k in f)cfg[f[k]]=$(k).value.trim();  
   saveCfg();$('dSet').close();  
 };  
@@ -647,15 +679,22 @@ $('perchOpen').onclick=()=>window.open(PERCH,'_blank');
 $('perchClose').onclick=()=>$('dPerch').close();  
 
 $('sAppCodeSave').onclick=()=>{  
-  const newHtml = $('sAppCode').value;  
-  if(!newHtml.trim()) return;  
-  localStorage.setItem('custom_app_code', newHtml);  
-  toast('Code saved! Reloading application...');  
-  setTimeout(() => {  
-    document.open();  
-    document.write(newHtml);  
-    document.close();  
-  }, 1000);  
+  const fileSel = $('sFileSelect').value;  
+  const codeVal = $('sAppCode').value;  
+  if(!codeVal.trim()) return;  
+  
+  if(fileSel === 'sw') {  
+    localStorage.setItem('custom_sw_code', codeVal);  
+    toast('Service worker code saved locally!');  
+  } else {  
+    localStorage.setItem('custom_app_code', codeVal);  
+    toast('Code saved! Reloading application...');  
+    setTimeout(() => {  
+      document.open();  
+      document.write(codeVal);  
+      document.close();  
+    }, 1000);  
+  }  
 };  
 
 /* Add-on code: runs at startup. If it freezes the app, it is skipped next launch. */  
@@ -722,11 +761,7 @@ if(AppP)AppP.addListener('backButton',()=>{
   else AppP.minimizeApp();  
 });  
 (async()=>{  
-  const customSavedCode = localStorage.getItem('custom_app_code');  
-  if(customSavedCode && customSavedCode !== document.documentElement.outerHTML && !window.__codeLoadedCustom){  
-    window.__codeLoadedCustom = true;  
-    // To allow self-updating seamlessly on boot if user previously saved edited app code  
-  }  
+  applyAppName();  
   chats=(await idbGet('chats'))||[];mems=(await idbGet('mems'))||[];  
   if(chats.length)cur=chats[0];else newChat();  
   renderMsgs();  
