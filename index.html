@@ -1,560 +1,695 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#faf9f5">
-<link rel="manifest" href="manifest.json">
-<title>MyChat</title>
-<style>
-:root{--bg:#faf9f5;--panel:#f0eee6;--card:#fff;--text:#1f1e1d;--mute:#73726c;--line:#e3e0d5;--accent:#c96442;--user:#ece9de;--code:#2b2a28}
-@media (prefers-color-scheme:dark){:root{--bg:#262624;--panel:#1f1e1d;--card:#30302e;--text:#eeece4;--mute:#a09f97;--line:#3d3d3a;--user:#393937}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Roboto,sans-serif}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-#app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}
-header{display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
-header h1{flex:1;margin:0;font-size:16px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:20px}
-.ib:active{background:var(--panel)}
-#msgs{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:18px}
-.msg.user{align-self:flex-end;max-width:85%;background:var(--user);border-radius:18px;padding:9px 14px}
-.msg.assistant{align-self:stretch}
-.msg.assistant .body:before{content:"✺";color:var(--accent);margin-right:6px}
-.body img.pic{max-width:100%;max-height:340px;border-radius:12px;display:block;margin:4px 0}
-.body video{max-width:100%;border-radius:12px;display:block;margin:4px 0}
-.txt{white-space:pre-wrap;word-wrap:break-word}
-.txt b.h{font-size:1.08em}
-.txt code{background:var(--panel);padding:1px 5px;border-radius:5px;font:14px ui-monospace,monospace}
-.code{background:var(--code);color:#eeece4;border-radius:12px;margin:8px 0;overflow:hidden}
-.ch{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#00000040;font-size:13px;color:#b8b6ac}
-.ch span{flex:1}.ch button{color:#eeece4;font-size:13px}
-.code pre{margin:0;padding:12px;overflow-x:auto}
-.code code{font:13.5px/1.5 ui-monospace,monospace;white-space:pre}
-.save{font-size:13px;color:var(--accent)}
-.hello{margin:auto;text-align:center;padding:20px}
-.hello h2{font:400 30px/1.2 Georgia,serif;margin:0 0 18px}
-.hello button{display:block;width:100%;max-width:320px;margin:8px auto;padding:11px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
-#composer{margin:6px 10px calc(10px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:26px;padding:8px 10px;box-shadow:0 2px 10px #0000000d}
-#chips{display:flex;gap:6px;flex-wrap:wrap}
-#chips .chip{position:relative}
-#chips img{height:56px;border-radius:10px;display:block}
-#chips .doc{padding:6px 10px;background:var(--panel);border-radius:10px;font-size:13px}
-#chips .x{position:absolute;top:-6px;right:-6px;background:var(--text);color:var(--bg);border-radius:50%;width:20px;height:20px;font-size:12px}
-#input{width:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;resize:none;max-height:150px;padding:6px 4px}
-.crow{display:flex;align-items:center;gap:2px}
-.crow .sp{flex:1}
-.mode{background:var(--panel);border-radius:14px;padding:3px 10px;font-size:13px;color:var(--accent)}
-#send{background:var(--accent);color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px}
-#menu{position:fixed;left:16px;bottom:calc(120px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;display:none;box-shadow:0 6px 24px #0003;z-index:20}
-#menu button{display:block;width:100%;text-align:left;padding:11px 16px;border-radius:10px;white-space:nowrap}
-#menu button:active{background:var(--panel)}
-#scrim{position:fixed;inset:0;background:#0006;display:none;z-index:30}
-#side{position:fixed;top:0;bottom:0;left:0;width:min(86vw,340px);background:var(--panel);transform:translateX(-100%);transition:transform .2s;z-index:31;display:flex;flex-direction:column;padding:calc(12px + env(safe-area-inset-top)) 12px 12px}
-#side.open{transform:none}
-.sh{display:flex;align-items:center;justify-content:space-between;font:600 20px Georgia,serif;margin-bottom:10px}
-.wide{width:100%;text-align:left;padding:11px 12px;border-radius:12px}
-.wide.acc{background:var(--accent);color:#fff;text-align:center;font-weight:600}
-#search{margin:10px 0;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit}
-#list{flex:1;overflow-y:auto}
-.ci{display:flex;align-items:center;border-radius:10px}
-.ci.on{background:var(--user)}
-.ci .t{flex:1;text-align:left;padding:10px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ci .a{padding:8px;color:var(--mute)}
-dialog{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:18px;width:min(94vw,480px);max-height:92dvh;padding:16px}
-dialog::backdrop{background:#0007}
-label{display:block;margin:12px 0 4px;color:var(--mute);font-size:13px}
-dialog input:not([type=checkbox]),dialog select,dialog textarea{width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit}
-.btn{background:var(--panel);border-radius:10px;padding:9px 14px}
-.btn.p{background:var(--accent);color:#fff}
-h4{margin:16px 0 0;color:var(--accent)}
-#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:18px;font-size:14px;opacity:0;transition:opacity .2s;z-index:60;pointer-events:none;max-width:90vw}
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.row small{display:block;color:var(--mute);font-size:12px;line-height:1.3}
-input.sw{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--line);border:0;padding:0;margin:0;position:relative;flex:none;transition:background .15s}
-input.sw:before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
-input.sw:checked{background:var(--accent)}
-input.sw:checked:before{transform:translateX(18px)}
-.mi{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
-.mi span{flex:1}.mi .a{color:var(--mute);padding:2px 8px}
-@media (min-width:800px){
-  #side{transform:none;z-index:1;width:320px}
-  #scrim{display:none!important}
-  #btnMenu,#sideClose{display:none}
-  #app{margin-left:320px;max-width:none}
-  #msgs{padding-left:max(16px,calc((100% - 820px)/2));padding-right:max(16px,calc((100% - 820px)/2))}
-  #composer{width:min(820px,calc(100% - 20px));align-self:center}
-}
-#call{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}
-.orb{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e8906e,var(--accent));animation:pulse 2s infinite ease-in-out}
-@keyframes pulse{50%{transform:scale(1.1)}}
-#cheard{color:var(--mute);max-width:90%}
-#frame{width:100%;height:60dvh;border:1px solid var(--line);border-radius:10px;background:#fff}
-</style>
-</head>
-<body>
-<div id="scrim"></div>
-<div id="toast"></div>
-<aside id="side">
-  <div class="sh"><span>MyChat</span><button class="ib" id="sideClose">✕</button></div>
-  <button class="wide acc" id="sNew">＋ New chat</button>
-  <input id="search" placeholder="Search chats">
-  <div id="list"></div>
-  <button class="wide" id="sMem2">🧠 Memory</button>
-  <button class="wide" id="sSet">⚙ Settings</button>
-</aside>
 
-<div id="app">
-  <header>
-    <button class="ib" id="btnMenu">☰</button>
-    <h1 id="title">New chat</h1>
-    <button class="ib" id="btnNew">✎</button>
-  </header>
-  <main id="msgs"></main>
-  <div id="menu">
-    <button data-a="cam">📷 Take a photo</button>
-    <button data-a="up">🖼 Upload photo or file</button>
-    <button data-a="image">🎨 Generate an image</button>
-    <button data-a="video">🎬 Generate a video</button>
-  </div>
-  <div id="composer">
-    <div id="chips"></div>
-    <textarea id="input" rows="1" placeholder="Message MyChat"></textarea>
-    <div class="crow">
-      <button class="ib" id="btnPlus">＋</button>
-      <button class="mode" id="modeChip" style="display:none"></button>
-      <span class="sp"></span>
-      <button class="ib" id="btnMic">🎤</button>
-      <button class="ib" id="btnCall">📞</button>
-      <button id="send">↑</button>
-    </div>
-  </div>
-</div>
-<input id="fCam" type="file" accept="image/*" capture="environment" hidden>
-<input id="fUp" type="file" accept="image/*,.txt,.md,.js,.ts,.py,.html,.css,.json,.csv,.java,.kt,.c,.cpp,.h,.cs,.go,.rs,.php,.sh,.sql,.xml,.yml,.yaml" multiple hidden>
-
-<div id="call">
-  <div class="orb"></div>
-  <div id="cstat" style="font-size:20px">Listening…</div>
-  <div id="cheard"></div>
-  <button class="btn p" id="cEnd" style="padding:14px 34px;border-radius:30px">End call</button>
-</div>
-
-<dialog id="dRun"><iframe id="frame" sandbox="allow-scripts"></iframe><div style="margin-top:10px;text-align:right"><button class="btn" id="runClose">Close</button></div></dialog>
-
-<dialog id="dMem"><h3 style="margin:0 0 4px">Memory</h3><div style="color:var(--mute);font-size:13px">Saved on this phone only. Say "remember that…" in any chat to add one.</div><div id="memList" style="margin:10px 0;max-height:50dvh;overflow-y:auto"></div><div style="display:flex;gap:8px"><input id="memIn" placeholder="Add a memory"><button class="btn p" id="memAdd">Add</button></div><div style="display:flex;justify-content:space-between;margin-top:12px"><button class="btn" id="memClear">Clear all</button><button class="btn" id="memClose">Close</button></div></dialog>
-
-<dialog id="dSet">
-  <h3 style="margin:0">Settings</h3>
-  <h4>Toggles</h4>
-  <div class="row"><div>Use memory<small>Remember things about you across all chats</small></div><input class="sw" id="sMem" type="checkbox"></div>
-  <div class="row"><div>Auto-remember<small>Learn new facts about you as you chat (uses a small extra request)</small></div><input class="sw" id="sLearn" type="checkbox"></div>
-  <div class="row"><div>Auto-summarize long chats<small>Keeps old parts of very long chats in the AI's context</small></div><input class="sw" id="sSum" type="checkbox"></div>
-  <div class="row"><div>Read replies aloud</div><input class="sw" id="sSpeak" type="checkbox"></div>
-  <div class="row"><div>Offline fallback<small>Switch to the on-device model when there is no internet</small></div><input class="sw" id="sAuto" type="checkbox"></div>
-  <div class="row"><div>Family-friendly mode<small>Asks the AI to keep replies suitable for all ages</small></div><input class="sw" id="sFam" type="checkbox"></div>
-  <div class="row"><div>Concise answers</div><input class="sw" id="sConcise" type="checkbox"></div>
-  <button class="btn" id="sMemBtn" style="margin-top:10px">🧠 Manage memory</button>
-  <h4>Chat</h4>
-  <label>Provider</label>
-  <select id="sProv"><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI-compatible</option><option value="local">On-device (offline)</option></select>
-  <label>API key (stays on this phone)</label><input id="sKey" type="password" autocomplete="off">
-  <label>Model</label><input id="sModel" placeholder="claude-sonnet-5-5">
-  <label>Base URL (OpenAI-compatible)</label><input id="sBase" placeholder="https://api.openai.com/v1">
-  <label>System prompt</label><textarea id="sSys" rows="3"></textarea>
-  <h4>Offline</h4>
-  <label>On-device model</label>
-  <select id="sLocal">
-    <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5 0.5B (~400MB)</option>
-    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B (~700MB)</option>
-    <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 1.5B (~1GB)</option>
-  </select>
-  <button class="btn" id="sDl" style="margin-top:8px">Download model for offline use</button>
-  <div id="dlStat" style="color:var(--mute);font-size:13px;margin-top:4px"></div>
-  <h4>Images and video</h4>
-  <label>Media base URL</label><input id="sMBase">
-  <label>Media API key (blank = reuse chat key)</label><input id="sMKey" type="password" autocomplete="off">
-  <label>Image model</label><input id="sImg">
-  <label>Video model</label><input id="sVid">
-  <div style="display:flex;gap:8px;margin-top:18px">
-    <button class="btn" id="sExport">Export</button>
-    <button class="btn" id="sClear">Delete all</button>
-    <span style="flex:1"></span>
-    <button class="btn" id="sCancel">Cancel</button>
-    <button class="btn p" id="sSave">Save</button>
-  </div>
-</dialog>
-
-<script>
-const $=id=>document.getElementById(id);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-/* ---------- storage: settings in localStorage, chats in IndexedDB (no size cap) ---------- */
-const DB=new Promise(r=>{const q=indexedDB.open('mychat',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result)});
-const idbGet=async k=>{const db=await DB;return new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result)})};
-const idbSet=async(k,v)=>{const db=await DB;return new Promise(r=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r})};
-const DEF={prov:'anthropic',key:'',model:'claude-sonnet-5-5',base:'https://api.openai.com/v1',sys:'You are a helpful assistant. When asked for code, write complete, working code in fenced code blocks.',auto:true,local:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',mbase:'https://api.openai.com/v1',mkey:'',img:'gpt-image-1',vid:'sora-2',speak:false,mem:true,learn:true,sum:true,fam:false,concise:false};
-let cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('cfg'))||{}}catch{return{}}})());
-let chats=[],mems=[],cur=null,pending=[],docs=[],mode='chat',busy=false,calling=false,ctrl=null,lastErr='',engine=null,engineModel='';
-const saveChats=()=>idbSet('chats',chats);
-const saveCfg=()=>localStorage.setItem('cfg',JSON.stringify(cfg));
-
-/* ---------- rendering ---------- */
-const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const inline=t=>esc(t).replace(/^#{1,3} (.*)$/gm,'<b class="h">$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>');
-function copy(t,btn){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()});btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1200)}
-function renderText(c,t){
-  t.split('```').forEach((p,i)=>{
-    if(i%2===0){if(p.trim()){const d=document.createElement('div');d.className='txt';d.innerHTML=inline(p.replace(/^\n+|\n+$/g,''));c.appendChild(d)}return}
-    let lang='',code=p;const nl=p.indexOf('\n');
-    if(nl>=0&&/^[\w+#.-]*$/.test(p.slice(0,nl).trim())){lang=p.slice(0,nl).trim();code=p.slice(nl+1)}
-    code=code.replace(/\n$/,'');
-    const w=document.createElement('div');w.className='code';
-    const h=document.createElement('div');h.className='ch';
-    const s=document.createElement('span');s.textContent=lang||'code';h.appendChild(s);
-    if(/^(html|svg)$/i.test(lang)){const b=document.createElement('button');b.textContent='▶ Run';b.onclick=()=>{$('frame').srcdoc=code;$('dRun').showModal()};h.appendChild(b)}
-    const cb=document.createElement('button');cb.textContent='Copy';cb.onclick=()=>copy(code,cb);h.appendChild(cb);
-    const pre=document.createElement('pre'),cd=document.createElement('code');cd.textContent=code;pre.appendChild(cd);
-    w.append(h,pre);c.appendChild(w);
-  });
-}
-function draw(el,m){
-  el.innerHTML='';
-  (m.images||[]).forEach(i=>{const im=document.createElement('img');im.className='pic';im.src='data:'+i.type+';base64,'+i.data;el.appendChild(im)});
-  if(m.video){const url=URL.createObjectURL(m.video);const v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=url;el.appendChild(v);
-    const a=document.createElement('a');a.className='save';a.href=url;a.download='video.mp4';a.textContent='Save video';el.appendChild(a)}
-  if(m.text)renderText(el,m.text);
-  else if(m.role==='assistant'&&busy&&!m.images?.length&&!m.video)el.appendChild(document.createTextNode('…'));
-}
-function scrollEnd(){const b=$('msgs');b.scrollTop=b.scrollHeight}
-function renderMsgs(){
-  const box=$('msgs');box.innerHTML='';$('title').textContent=cur.title;
-  if(!cur.msgs.length){
-    box.innerHTML='<div class="hello"><h2>How can I help you today?</h2><button data-s="Write a complete to-do list web app in one HTML file">💻 Write some code</button><button data-s="Help me understand the photo I\'m about to attach">📷 Help with a photo</button><button data-s="Explain how recursion works with a simple example">🎓 Learn something</button></div>';
-    box.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{$('input').value=b.dataset.s;$('input').focus()});
-  }
-  cur.msgs.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.role;const b=document.createElement('div');b.className='body';d.appendChild(b);box.appendChild(d);draw(b,m)});
-  scrollEnd();renderChips();
-}
-function renderChips(){
-  const c=$('chips');c.innerHTML='';
-  pending.forEach((i,n)=>{const d=document.createElement('div');d.className='chip';d.innerHTML='<img src="data:'+i.type+';base64,'+i.data+'"><button class="x">✕</button>';d.querySelector('.x').onclick=()=>{pending.splice(n,1);renderChips()};c.appendChild(d)});
-  docs.forEach((f,n)=>{const d=document.createElement('div');d.className='chip';d.innerHTML='<div class="doc">📄 '+esc(f.name)+'</div><button class="x">✕</button>';d.querySelector('.x').onclick=()=>{docs.splice(n,1);renderChips()};c.appendChild(d)});
-}
-function renderList(){
-  const q=$('search').value.toLowerCase(),L=$('list');L.innerHTML='';
-  chats.filter(c=>c.title.toLowerCase().includes(q)).forEach(c=>{
-    const d=document.createElement('div');d.className='ci'+(c===cur?' on':'');
-    d.innerHTML='<button class="t"></button><button class="a">✏</button><button class="a">🗑</button>';
-    const [t,e,x]=d.children;t.textContent=c.title;
-    t.onclick=()=>{cur=c;closeSide();renderMsgs()};
-    e.onclick=()=>{const n=prompt('Rename chat',c.title);if(n){c.title=n.slice(0,60);saveChats();renderList();$('title').textContent=cur.title}};
-    x.onclick=()=>{if(!confirm('Delete this chat?'))return;chats=chats.filter(z=>z!==c);if(!chats.length)newChat();else if(cur===c)cur=chats[0];saveChats();renderList();renderMsgs()};
-    L.appendChild(d);
-  });
-}
-function openSide(){renderList();$('side').classList.add('open');$('scrim').style.display='block'}
-function closeSide(){$('side').classList.remove('open');$('scrim').style.display='none'}
-function newChat(){if(cur&&!cur.msgs.length){closeSide();return}cur={id:Date.now(),title:'New chat',msgs:[]};chats.unshift(cur);saveChats();closeSide();renderMsgs()}
-function setMode(m){mode=m;const c=$('modeChip');c.style.display=m==='chat'?'none':'';c.textContent=(m==='image'?'🎨 Image':'🎬 Video')+' ✕';$('input').placeholder=m==='chat'?'Message MyChat':'Describe the '+m+'…'}
-function setSend(){$('send').textContent=busy?'■':'↑'}
-function autosize(){const i=$('input');i.style.height='auto';i.style.height=Math.min(i.scrollHeight,150)+'px'}
-
-/* ---------- voice ---------- */
-function speak(t,force){
-  if(!(cfg.speak||force)||!window.speechSynthesis)return Promise.resolve();
-  const clean=t.replace(/```[\s\S]*?```/g,' code block. ').replace(/[*#`_]/g,'');
-  return new Promise(r=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.onend=u.onerror=()=>r();speechSynthesis.speak(u)});
-}
-let recRef=null;
-function listenOnce(){
-  lastErr='';
-  const NP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;
-  if(NP)return new Promise(async res=>{
-    let last='',timer,done=false,h=null;
-    const finish=async()=>{if(done)return;done=true;clearTimeout(timer);try{await NP.stop()}catch{}try{h&&h.remove()}catch{}res(last)};
-    try{
-      const p=await NP.requestPermissions();
-      if(p&&p.speechRecognition&&p.speechRecognition!=='granted'){lastErr='Microphone permission denied';return res('')}
-      h=await NP.addListener('partialResults',d=>{last=(d.matches&&d.matches[0])||last;clearTimeout(timer);timer=setTimeout(finish,1600)});
-      timer=setTimeout(finish,9000);
-      await NP.start({language:navigator.language||'en-US',partialResults:true,popup:false});
-    }catch(e){lastErr='Microphone unavailable';done=true;res('')}
-  });
-  return new Promise(res=>{
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){lastErr='Speech recognition is not supported here';return res('')}
-    const r=new SR();recRef=r;r.lang=navigator.language||'en-US';let got='';
-    r.onresult=e=>{got=e.results[0][0].transcript};
-    r.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')lastErr='Mic error: '+e.error};
-    r.onend=()=>res(got);
-    try{r.start()}catch{res('')}
-  });
-}
-async function dictate(){
-  $('btnMic').textContent='🔴';const t=await listenOnce();$('btnMic').textContent='🎤';
-  if(t){$('input').value+=(($('input').value?' ':'')+t);autosize()}else if(lastErr)alert(lastErr);
-}
-async function callLoop(){
-  while(calling){
-    $('cstat').textContent='Listening…';
-    const t=await listenOnce();
-    if(!calling)break;
-    if(lastErr){$('cstat').textContent=lastErr;await sleep(2200);endCall();break}
-    if(!t)continue;
-    $('cheard').textContent=t;$('cstat').textContent='Thinking…';
-    await send({text:t,call:true});
-    const l=cur.msgs[cur.msgs.length-1];
-    if(l&&l.err){endCall();break}
-  }
-}
-function startCall(){calling=true;$('call').style.display='flex';$('cheard').textContent='';callLoop()}
-function endCall(){calling=false;$('call').style.display='none';try{speechSynthesis.cancel()}catch{};try{recRef&&recRef.abort()}catch{};try{window.Capacitor.Plugins.SpeechRecognition.stop()}catch{}}
-
-/* ---------- models ---------- */
-async function getEngine(onProg){
-  if(engine&&engineModel===cfg.local)return engine;
-  if(!navigator.gpu)throw new Error('On-device mode needs WebGPU, which this device or WebView does not support.');
-  const {CreateMLCEngine}=await import('https://esm.run/@mlc-ai/web-llm');
-  engine=await CreateMLCEngine(cfg.local,{initProgressCallback:p=>onProg&&onProg(p.text)});
-  engineModel=cfg.local;return engine;
-}
-function effProv(){
-  if(cfg.prov==='local')return 'local';
-  if(cfg.auto&&(!navigator.onLine||!cfg.key))return 'local';
-  return cfg.prov;
-}
-/* Unlimited chat: nothing is capped; only what is SENT is trimmed to fit the model's context window. */
-function history(P){
-  const budget=P==='local'?5000:60000;let used=0;const sel=[];
-  const ms=cur.msgs.map((m,i)=>({m,i})).filter(x=>!x.m.err&&(x.m.text||(x.m.images&&x.m.images.length)));
-  for(let k=ms.length-1;k>=0;k--){const m=ms[k].m;const l=(m.text||'').length+((m.images&&m.images.length)||0)*1500;if(used+l>budget&&sel.length)break;used+=l;sel.unshift(ms[k])}
-  while(sel.length&&sel[0].m.role!=='user')sel.shift();
-  history.start=sel.length?sel[0].i:cur.msgs.length;
-  const out=sel.map(x=>x.m);let imgs=0;
-  for(let i=out.length-1;i>=0;i--){const m=out[i];if(m.role==='user'&&m.images&&m.images.length){imgs++;if(imgs>3)out[i]={...m,images:[]}}else if(m.role==='assistant')out[i]={...m,images:[]}}
-  return out;
-}
-async function sse(resp,onData){
-  const rd=resp.body.getReader(),dec=new TextDecoder();let buf='';
-  while(true){
-    const{done,value}=await rd.read();if(done)break;
-    buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();
-    for(const l of lines){if(!l.startsWith('data:'))continue;const p=l.slice(5).trim();if(!p||p==='[DONE]')continue;try{onData(JSON.parse(p))}catch{}}
-  }
-}
-const TOG={sAuto:'auto',sSpeak:'speak',sMem:'mem',sLearn:'learn',sSum:'sum',sFam:'fam',sConcise:'concise'};
-const memBlock=()=>{let s='';for(let i=mems.length-1;i>=0;i--){const l='- '+mems[i].t+'\n';if(s.length+l.length>2500)break;s=l+s}return s};
-const sysFor=call=>{
-  let s=cfg.sys;
-  if(cfg.fam)s+='\nKeep all responses family-friendly and suitable for all ages.';
-  if(cfg.concise)s+='\nBe concise.';
-  if(cfg.mem&&mems.length)s+='\n\nWhat you know about the user from saved memory (use when relevant, do not recite unprompted):\n'+memBlock();
-  if(cfg.sum&&cur&&cur.summary)s+='\n\nNotes on the earlier part of this conversation:\n'+cur.summary;
-  if(call)s+='\nYou are in a live voice call. Reply in one to three short, natural spoken sentences. No markdown, no code blocks.';
-  return s;
-};
-function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.opacity=0,2500)}
-function addMem(t){t=t.trim().replace(/[.!]+$/,'');if(!t||mems.some(z=>z.t.toLowerCase()===t.toLowerCase()))return false;mems.push({t,id:Date.now()+mems.length});idbSet('mems',mems);toast('Remembered: '+t.slice(0,60));return true}
-function renderMems(){
-  const L=$('memList');L.innerHTML='';
-  if(!mems.length)L.innerHTML='<div style="color:var(--mute)">Nothing saved yet.</div>';
-  mems.forEach((m,n)=>{const d=document.createElement('div');d.className='mi';d.innerHTML='<span></span><button class="a">✕</button>';d.firstChild.textContent=m.t;d.lastChild.onclick=()=>{mems.splice(n,1);idbSet('mems',mems);renderMems()};L.appendChild(d)});
-}
-function openMem(){closeSide();if($('dSet').open)$('dSet').close();renderMems();$('dMem').showModal()}
-async function ask(P,system,user,max){
-  if(P==='anthropic'){
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.model,max_tokens:max,system,messages:[{role:'user',content:user}]})});
-    if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.content||[]).map(c=>c.text||'').join('').trim();
-  }
-  const r=await fetch(cfg.base.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,max_tokens:max,messages:[{role:'system',content:system},{role:'user',content:user}]})});
-  if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.choices[0].message.content||'').trim();
-}
-/* Long-chat memory: older messages that no longer fit are folded into a running summary. */
-async function ensureSummary(P){
-  if(!cfg.sum||P==='local'||!cfg.key)return;
-  history(P);const end=history.start,from=cur.sumUpTo||0;
-  if(end<=from)return;
-  const chunk=cur.msgs.slice(from,end).filter(m=>!m.err&&m.text).map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.text.slice(0,2000)).join('\n').slice(-14000);
-  if(!chunk){cur.sumUpTo=end;return}
-  try{
-    const t=await ask(P,'You compress conversations into short working notes.','Previous notes:\n'+(cur.summary||'(none)')+'\n\nNew messages to fold in:\n'+chunk+'\n\nWrite the updated notes (max 250 words): facts about the user, decisions, goals, code written (names and purpose) and open tasks.',600);
-    if(t){cur.summary=t;cur.sumUpTo=end}
-  }catch{}
-}
-/* Cross-chat memory: pull durable facts about the user out of what they said. */
-async function learn(userText,P){
-  if(!cfg.mem||!cfg.learn||P==='local'||!cfg.key||userText.length<8)return;
-  try{
-    const r=await ask(P,'You extract long-term memory facts about a user. Reply with ONLY a JSON array of short strings.','Existing memories:\n'+(mems.map(m=>'- '+m.t).join('\n')||'(none)')+'\n\nUser message:\n'+userText.slice(0,1500)+'\n\nList NEW durable facts worth remembering for future chats (name, preferences, projects, skills, goals, how they like answers). Skip anything already known and one-off requests. Never store passwords, API keys, payment card numbers or government ID numbers. Return [] if there is nothing.',200);
-    const m=r.match(/\[[\s\S]*\]/);if(!m)return;
-    JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()&&x.length<200).slice(0,5).forEach(t=>{if(mems.length<150)addMem(t)});
-  }catch{}
-}
-async function runCloud(P,out,el,call){
-  const hist=history(P);let url,headers,body;
-  if(P==='anthropic'){
-    url='https://api.anthropic.com/v1/messages';
-    headers={'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-    body={model:cfg.model,max_tokens:8192,stream:true,system:sysFor(call),messages:hist.map(m=>{
-      const c=(m.images||[]).map(i=>({type:'image',source:{type:'base64',media_type:i.type,data:i.data}}));if(m.text)c.push({type:'text',text:m.text});return{role:m.role,content:c}})};
-  }else{
-    url=cfg.base.replace(/\/$/,'')+'/chat/completions';
-    headers={'content-type':'application/json',authorization:'Bearer '+cfg.key};
-    body={model:cfg.model,stream:true,messages:[{role:'system',content:sysFor(call)},...hist.map(m=>{
-      const c=(m.images||[]).map(i=>({type:'image_url',image_url:{url:'data:'+i.type+';base64,'+i.data}}));if(m.text)c.push({type:'text',text:m.text});return{role:m.role,content:c}})]};
-  }
-  const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:ctrl.signal});
-  if(!r.ok)throw new Error(r.status+' '+await r.text());
-  await sse(r,j=>{
-    const t=P==='anthropic'?(j.type==='content_block_delta'?j.delta.text||'':''):(j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content||'');
-    if(t){out.text+=t;draw(el,out);scrollEnd()}
-  });
-}
-async function runLocal(out,el,call){
-  el.textContent='Loading on-device model…';
-  const eng=await getEngine(s=>{el.textContent=s});
-  const msgs=[{role:'system',content:sysFor(call)},...history('local').filter(m=>m.text).map(m=>({role:m.role,content:m.text}))];
-  const st=await eng.chat.completions.create({messages:msgs,stream:true,max_tokens:2048});
-  for await(const ch of st){if(ctrl.signal.aborted)break;const t=ch.choices[0]&&ch.choices[0].delta&&ch.choices[0].delta.content||'';if(t){out.text+=t;draw(el,out);scrollEnd()}}
-}
-const mHeaders=()=>({authorization:'Bearer '+(cfg.mkey||(cfg.prov!=='anthropic'?cfg.key:''))});
-const mBase=()=>cfg.mbase.replace(/\/$/,'');
-async function genImage(prompt,out,el){
-  if(!navigator.onLine)throw new Error('Image generation needs internet.');
-  if(!mHeaders().authorization.slice(7))throw new Error('Add a media API key in Settings → Images and video.');
-  el.textContent='Generating image…';
-  const r=await fetch(mBase()+'/images/generations',{method:'POST',headers:{...mHeaders(),'content-type':'application/json'},body:JSON.stringify({model:cfg.img,prompt,n:1}),signal:ctrl.signal});
-  if(!r.ok)throw new Error(r.status+' '+await r.text());
-  const d=(await r.json()).data[0];
-  if(d.b64_json)out.images=[{type:'image/png',data:d.b64_json}];
-  else if(d.url){const b=await(await fetch(d.url)).blob();out.images=[await blobToImg(b)]}
-  out.text='Here is your image.';
-}
-async function genVideo(prompt,out,el){
-  if(!navigator.onLine)throw new Error('Video generation needs internet.');
-  if(!mHeaders().authorization.slice(7))throw new Error('Add a media API key in Settings → Images and video.');
-  el.textContent='Starting video…';
-  let r=await fetch(mBase()+'/videos',{method:'POST',headers:{...mHeaders(),'content-type':'application/json'},body:JSON.stringify({model:cfg.vid,prompt,seconds:'8',size:'1280x720'}),signal:ctrl.signal});
-  if(!r.ok)throw new Error(r.status+' '+await r.text());
-  let j=await r.json();
-  while(j.status==='queued'||j.status==='in_progress'){
-    el.textContent='Generating video… '+(j.progress!=null?j.progress+'%':'this can take a few minutes');
-    await sleep(5000);if(ctrl.signal.aborted)throw new DOMException('stop','AbortError');
-    r=await fetch(mBase()+'/videos/'+j.id,{headers:mHeaders(),signal:ctrl.signal});
-    if(!r.ok)throw new Error(r.status+' '+await r.text());j=await r.json();
-  }
-  if(j.status!=='completed')throw new Error('Video failed: '+(j.error&&j.error.message||j.status));
-  r=await fetch(mBase()+'/videos/'+j.id+'/content',{headers:mHeaders(),signal:ctrl.signal});
-  if(!r.ok)throw new Error(r.status+' '+await r.text());
-  out.video=await r.blob();out.text='Here is your video.';
-}
-
-/* ---------- files and camera ---------- */
-const blobToImg=f=>new Promise(res=>{const r=new FileReader();r.onload=()=>res({type:f.type||'image/png',data:r.result.split(',')[1]});r.readAsDataURL(f)});
-async function photo(f){
-  const url=URL.createObjectURL(f);
-  const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
-  const s=Math.min(1,1568/Math.max(im.width,im.height));
-  const c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
-  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
-  return{type:'image/jpeg',data:c.toDataURL('image/jpeg',.85).split(',')[1]};
-}
-async function addFiles(files){
-  for(const f of files){
-    try{
-      if(f.type.startsWith('image/'))pending.push(await photo(f));
-      else docs.push({name:f.name,text:(await f.text()).slice(0,60000)});
-    }catch{alert('Could not read '+f.name)}
-  }
-  renderChips();
-}
-
-/* ---------- send ---------- */
-async function send(o={}){
-  if(busy){if(ctrl)ctrl.abort();return ''}
-  let text=(o.text!==undefined?o.text:$('input').value).trim();
-  if(!text&&!pending.length&&!docs.length)return '';
-  const P=effProv(),m0=mode;
-  if(m0==='chat'&&P!=='local'&&!cfg.key){openSettings();return ''}
-  const raw=text;
-  const mm=cfg.mem&&raw.match(/^(?:please\s+)?remember(?:\s+that)?\s+(.{3,200})$/i);if(mm)addMem(mm[1]);
-  docs.forEach(d=>{text='File: '+d.name+'\n```\n'+d.text+'\n```\n'+text});
-  cur.msgs.push({role:'user',text,images:pending});
-  if(cur.title==='New chat'&&text)cur.title=text.replace(/```[\s\S]*?```/g,'').trim().slice(0,40)||'Chat';
-  pending=[];docs=[];setMode('chat');$('input').value='';autosize();
-  const out={role:'assistant',text:''};cur.msgs.push(out);
-  busy=true;setSend();renderMsgs();
-  const el=$('msgs').lastChild.querySelector('.body');
-  ctrl=new AbortController();
-  try{
-    if(m0==='image')await genImage(text,out,el);
-    else if(m0==='video')await genVideo(text,out,el);
-    else if(P==='local')await runLocal(out,el,o.call);
-    else{await ensureSummary(P);await runCloud(P,out,el,o.call)}
-  }catch(e){if(e.name!=='AbortError'){out.text+=(out.text?'\n':'')+'⚠ '+e.message;out.err=true}}
-  busy=false;setSend();draw(el,out);scrollEnd();await saveChats();
-  if(!out.err&&m0==='chat')learn(raw,P);
-  if(!out.err){if(o.call){$('cstat').textContent='Speaking…';await speak(out.text,true)}else if(cfg.speak)speak(out.text)}
-  return out.text;
-}
-
-/* ---------- settings ---------- */
-function openSettings(){
-  closeSide();
-  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};
-  for(const k in f)$(k).value=cfg[f[k]];
-  for(const k in TOG)$(k).checked=cfg[TOG[k]];$('dlStat').textContent=navigator.gpu?'WebGPU: available, offline AI should run on this phone.':'WebGPU: not available here. Offline AI will not run in this app; try it in Chrome instead.';$('dSet').showModal();
-}
-$('sSave').onclick=()=>{
-  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};
-  for(const k in f)cfg[f[k]]=$(k).value.trim();
-  saveCfg();$('dSet').close();
-};
-$('sCancel').onclick=()=>$('dSet').close();
-$('sDl').onclick=async()=>{cfg.local=$('sLocal').value;try{await getEngine(s=>$('dlStat').textContent=s);$('dlStat').textContent='Ready. Works offline now.'}catch(e){$('dlStat').textContent='⚠ '+e.message}};
-$('sClear').onclick=()=>{if(confirm('Delete ALL chats?')){chats=[];cur=null;$('dSet').close();newChat();saveChats()}};
-$('sExport').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(chats.map(c=>({...c,msgs:c.msgs.map(m=>({role:m.role,text:m.text}))})),null,1)],{type:'application/json'}));a.download='chats.json';a.click()};
-
-/* ---------- wiring ---------- */
-$('send').onclick=()=>send();
-$('input').addEventListener('input',autosize);
-$('btnMenu').onclick=openSide;$('sideClose').onclick=closeSide;$('scrim').onclick=()=>{closeSide();$('menu').style.display='none'};
-$('btnNew').onclick=newChat;$('sNew').onclick=newChat;$('sSet').onclick=openSettings;
-$('search').oninput=renderList;
-for(const k in TOG)$(k).onchange=()=>{cfg[TOG[k]]=$(k).checked;saveCfg()};
-$('sMem2').onclick=openMem;$('sMemBtn').onclick=openMem;$('memClose').onclick=()=>$('dMem').close();
-$('memAdd').onclick=()=>{if(addMem($('memIn').value)){$('memIn').value='';renderMems()}};
-$('memIn').onkeydown=e=>{if(e.key==='Enter')$('memAdd').click()};
-$('memClear').onclick=()=>{if(confirm('Delete all memories?')){mems=[];idbSet('mems',mems);renderMems()}};
-$('btnMic').onclick=dictate;$('btnCall').onclick=startCall;$('cEnd').onclick=endCall;
-$('runClose').onclick=()=>{$('frame').srcdoc='';$('dRun').close()};
-$('btnPlus').onclick=()=>{const m=$('menu');m.style.display=m.style.display==='block'?'none':'block'};
-$('modeChip').onclick=()=>setMode('chat');
-$('menu').onclick=e=>{
-  const a=e.target.dataset.a;if(!a)return;$('menu').style.display='none';
-  if(a==='cam')$('fCam').click();else if(a==='up')$('fUp').click();
-  else{setMode(a);$('input').focus()}
-};
-$('fCam').onchange=async e=>{await addFiles(e.target.files);e.target.value=''};
-$('fUp').onchange=async e=>{await addFiles(e.target.files);e.target.value=''};
-document.addEventListener('click',e=>{if(!e.target.closest('#menu,#btnPlus'))$('menu').style.display='none'});
-window.addEventListener('paste',e=>{const fs=[...(e.clipboardData&&e.clipboardData.files||[])];if(fs.length)addFiles(fs)});
-
-const AppP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
-if(AppP)AppP.addListener('backButton',()=>{
-  const d=[...document.querySelectorAll('dialog')].find(x=>x.open);
-  if(calling)endCall();
-  else if(d)d.close();
-  else if($('menu').style.display==='block')$('menu').style.display='none';
-  else if($('side').classList.contains('open'))closeSide();
-  else AppP.minimizeApp();
-});
-(async()=>{
-  chats=(await idbGet('chats'))||[];mems=(await idbGet('mems'))||[];
-  if(chats.length)cur=chats[0];else newChat();
-  renderMsgs();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-})();
-</script>
-</body>
-</html>
+<html lang="en">  
+<head>  
+<meta charset="utf-8">  
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">  
+<meta name="theme-color" content="#faf9f5">  
+<link rel="manifest" href="manifest.json">  
+<title>MyChat</title>  
+<style>  
+:root{--bg:#faf9f5;--panel:#f0eee6;--card:#fff;--text:#1f1e1d;--mute:#73726c;--line:#e3e0d5;--accent:#c96442;--user:#ece9de;--code:#2b2a28}  
+@media (prefers-color-scheme:dark){:root{--bg:#262624;--panel:#1f1e1d;--card:#30302e;--text:#eeece4;--mute:#a09f97;--line:#3d3d3a;--user:#393937}}  
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}  
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Roboto,sans-serif}  
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}  
+#app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}  
+header{display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}  
+header h1{flex:1;margin:0;font-size:16px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}  
+.ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:20px}  
+.ib:active{background:var(--panel)}  
+#msgs{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;flex-direction:column;gap:18px}  
+.msg.user{align-self:flex-end;max-width:85%;background:var(--user);border-radius:18px;padding:9px 14px}  
+.msg.assistant{align-self:stretch}  
+.msg.assistant .body:before{content:"✺";color:var(--accent);margin-right:6px}  
+.body img.pic{max-width:100%;max-height:340px;border-radius:12px;display:block;margin:4px 0}  
+.body video{max-width:100%;border-radius:12px;display:block;margin:4px 0}  
+.txt{white-space:pre-wrap;word-wrap:break-word}  
+.txt b.h{font-size:1.08em}  
+.txt code{background:var(--panel);padding:1px 5px;border-radius:5px;font:14px ui-monospace,monospace}  
+.code{background:var(--code);color:#eeece4;border-radius:12px;margin:8px 0;overflow:hidden}  
+.ch{display:flex;align-items:center;gap:12px;padding:6px 12px;background:#00000040;font-size:13px;color:#b8b6ac}  
+.ch span{flex:1}.ch button{color:#eeece4;font-size:13px}  
+.code pre{margin:0;padding:12px;overflow-x:auto}  
+.code code{font:13.5px/1.5 ui-monospace,monospace;white-space:pre}  
+.save{font-size:13px;color:var(--accent)}  
+.hello{margin:auto;text-align:center;padding:20px}  
+.hello h2{font:400 30px/1.2 Georgia,serif;margin:0 0 18px}  
+.hello button{display:block;width:100%;max-width:320px;margin:8px auto;padding:11px;border:1px solid var(--line);border-radius:14px;background:var(--card)}  
+#composer{margin:6px 10px calc(10px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:26px;padding:8px 10px;box-shadow:0 2px 10px #0000000d}  
+#chips{display:flex;gap:6px;flex-wrap:wrap}  
+#chips .chip{position:relative}  
+#chips img{height:56px;border-radius:10px;display:block}  
+#chips .doc{padding:6px 10px;background:var(--panel);border-radius:10px;font-size:13px}  
+#chips .x{position:absolute;top:-6px;right:-6px;background:var(--text);color:var(--bg);border-radius:50%;width:20px;height:20px;font-size:12px}  
+#input{width:100%;border:0;outline:0;background:none;color:var(--text);font:inherit;resize:none;max-height:150px;padding:6px 4px}  
+.crow{display:flex;align-items:center;gap:2px}  
+.crow .sp{flex:1}  
+.mode{background:var(--panel);border-radius:14px;padding:3px 10px;font-size:13px;color:var(--accent)}  
+#send{background:var(--accent);color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px}  
+#menu{position:fixed;left:16px;bottom:calc(120px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;display:none;box-shadow:0 6px 24px #0003;z-index:20}  
+#menu button{display:block;width:100%;text-align:left;padding:11px 16px;border-radius:10px;white-space:nowrap}  
+#menu button:active{background:var(--panel)}  
+#scrim{position:fixed;inset:0;background:#0006;display:none;z-index:30}  
+#side{position:fixed;top:0;bottom:0;left:0;width:min(86vw,340px);background:var(--panel);transform:translateX(-100%);transition:transform .2s;z-index:31;display:flex;flex-direction:column;padding:calc(12px + env(safe-area-inset-top)) 12px 12px}  
+#side.open{transform:none}  
+.sh{display:flex;align-items:center;justify-content:space-between;font:600 20px Georgia,serif;margin-bottom:10px}  
+.wide{width:100%;text-align:left;padding:11px 12px;border-radius:12px}  
+.wide.acc{background:var(--accent);color:#fff;text-align:center;font-weight:600}  
+#search{margin:10px 0;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit}  
+#list{flex:1;overflow-y:auto}  
+.ci{display:flex;align-items:center;border-radius:10px}  
+.ci.on{background:var(--user)}  
+.ci .t{flex:1;text-align:left;padding:10px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}  
+.ci .a{padding:8px;color:var(--mute)}  
+dialog{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:18px;width:min(94vw,480px);max-height:92dvh;padding:16px}  
+dialog::backdrop{background:#0007}  
+label{display:block;margin:12px 0 4px;color:var(--mute);font-size:13px}  
+dialog input:not([type=checkbox]),dialog select,dialog textarea{width:100%;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit}  
+.btn{background:var(--panel);border-radius:10px;padding:9px 14px}  
+.btn.p{background:var(--accent);color:#fff}  
+h4{margin:16px 0 0;color:var(--accent)}  
+#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:18px;font-size:14px;opacity:0;transition:opacity .2s;z-index:60;pointer-events:none;max-width:90vw}  
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}  
+.row small{display:block;color:var(--mute);font-size:12px;line-height:1.3}  
+input.sw{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--line);border:0;padding:0;margin:0;position:relative;flex:none;transition:background .15s}  
+input.sw:before{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}  
+input.sw:checked{background:var(--accent)}  
+input.sw:checked:before{transform:translateX(18px)}  
+.mi{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}  
+.mi span{flex:1}.mi .a{color:var(--mute);padding:2px 8px}  
+@media (min-width:800px){  
+  #side{transform:none;z-index:1;width:320px}  
+  #scrim{display:none!important}  
+  #btnMenu,#sideClose{display:none}  
+  #app{margin-left:320px;max-width:none}  
+  #msgs{padding-left:max(16px,calc((100% - 820px)/2));padding-right:max(16px,calc((100% - 820px)/2))}  
+  #composer{width:min(820px,calc(100% - 20px));align-self:center}  
+}  
+#call{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px}  
+.orb{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e8906e,var(--accent));animation:pulse 2s infinite ease-in-out}  
+@keyframes pulse{50%{transform:scale(1.1)}}  
+#cheard{color:var(--mute);max-width:90%;white-space:pre-wrap}  
+#cerr{color:#c0392b;max-width:90%;font-size:14px;white-space:pre-wrap}  
+.cbtns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}  
+#sAddon{font:13px/1.4 ui-monospace,monospace;white-space:pre}  
+#frame{width:100%;height:60dvh;border:1px solid var(--line);border-radius:10px;background:#fff}  
+</style>  
+</head>  
+<body>  
+<div id="scrim"></div>  
+<div id="toast"></div>  
+<aside id="side">  
+  <div class="sh"><span>MyChat</span><button class="ib" id="sideClose">✕</button></div>  
+  <button class="wide acc" id="sNew">＋ New chat</button>  
+  <input id="search" placeholder="Search chats">  
+  <div id="list"></div>  
+  <button class="wide" id="sMem2">🧠 Memory</button>  
+  <button class="wide" id="sSet">⚙ Settings</button>  
+</aside>  <div id="app">  
+  <header>  
+    <button class="ib" id="btnMenu">☰</button>  
+    <h1 id="title">New chat</h1>  
+    <button class="ib" id="btnNew">✎</button>  
+  </header>  
+  <main id="msgs"></main>  
+  <div id="menu">  
+    <button data-a="cam">📷 Take a photo</button>  
+    <button data-a="up">🖼 Upload photo or file</button>  
+    <button data-a="image">🎨 Generate an image</button>  
+    <button data-a="video">🎬 Generate a video</button>  
+    <button data-a="perch">🌐 Perchance image generator (free)</button>  
+  </div>  
+  <div id="composer">  
+    <div id="chips"></div>  
+    <textarea id="input" rows="1" placeholder="Message MyChat"></textarea>  
+    <div class="crow">  
+      <button class="ib" id="btnPlus">＋</button>  
+      <button class="mode" id="modeChip" style="display:none"></button>  
+      <span class="sp"></span>  
+      <button class="ib" id="btnMic">🎤</button>  
+      <button class="ib" id="btnCall">📞</button>  
+      <button id="send">↑</button>  
+    </div>  
+  </div>  
+</div>  
+<input id="fCam" type="file" accept="image/*" capture="environment" hidden>  
+<input id="fOwn" type="file" hidden>  
+<input id="fImp" type="file" accept=".json,application/json" hidden>  
+<input id="fUp" type="file" accept="image/*,.txt,.md,.js,.ts,.py,.html,.css,.json,.csv,.java,.kt,.c,.cpp,.h,.cs,.go,.rs,.php,.sh,.sql,.xml,.yml,.yaml" multiple hidden>  <div id="call">  
+  <div class="orb"></div>  
+  <div id="cstat" style="font-size:20px">Listening…</div>  
+  <div id="cheard"></div>  
+  <div id="cerr"></div>  
+  <div class="cbtns">  
+    <button class="btn" id="cTalk" style="padding:14px 26px;border-radius:30px">Tap to talk</button>  
+    <button class="btn p" id="cEnd" style="padding:14px 34px;border-radius:30px">End call</button>  
+  </div>  
+</div>  <dialog id="dRun"><iframe id="frame" sandbox="allow-scripts"></iframe><div style="margin-top:10px;text-align:right"><button class="btn" id="runClose">Close</button></div></dialog>  <dialog id="dPerch" style="width:min(96vw,720px)">  
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b style="flex:1">Perchance image generator</b><button class="btn" id="perchOpen">Open in browser</button><button class="btn" id="perchClose">Close</button></div>  
+  <iframe id="perchFrame" style="width:100%;height:68dvh;border:1px solid var(--line);border-radius:10px;background:#fff"></iframe>  
+  <div style="color:var(--mute);font-size:12px;margin-top:6px">Free website, needs internet. If the page stays blank, tap "Open in browser".</div>  
+</dialog>  <dialog id="dMem"><h3 style="margin:0 0 4px">Memory</h3><div style="color:var(--mute);font-size:13px">Saved on this phone only. Say "remember that…" in any chat to add one.</div><div id="memList" style="margin:10px 0;max-height:50dvh;overflow-y:auto"></div><div style="display:flex;gap:8px"><input id="memIn" placeholder="Add a memory"><button class="btn p" id="memAdd">Add</button></div><div style="display:flex;justify-content:space-between;margin-top:12px"><button class="btn" id="memClear">Clear all</button><button class="btn" id="memClose">Close</button></div></dialog>  <dialog id="dSet">  
+  <h3 style="margin:0">Settings</h3>  
+  <h4>Toggles</h4>  
+  <div class="row"><div>Use memory<small>Remember things about you across all chats</small></div><input class="sw" id="sMem" type="checkbox"></div>  
+  <div class="row"><div>Auto-remember<small>Learn new facts about you as you chat (uses a small extra request)</small></div><input class="sw" id="sLearn" type="checkbox"></div>  
+  <div class="row"><div>Auto-summarize long chats<small>Keeps old parts of very long chats in the AI's context</small></div><input class="sw" id="sSum" type="checkbox"></div>  
+  <div class="row"><div>Read replies aloud</div><input class="sw" id="sSpeak" type="checkbox"></div>  
+  <div class="row"><div>Offline fallback<small>Switch to the on-device model when there is no internet</small></div><input class="sw" id="sAuto" type="checkbox"></div>  
+  <div class="row"><div>Family-friendly mode<small>Asks the AI to keep replies suitable for all ages</small></div><input class="sw" id="sFam" type="checkbox"></div>  
+  <div class="row"><div>Concise answers</div><input class="sw" id="sConcise" type="checkbox"></div>  
+  <button class="btn" id="sMemBtn" style="margin-top:10px">🧠 Manage memory</button>  
+  <h4>Chat</h4>  
+  <label>Provider</label>  
+  <select id="sProv"><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI-compatible</option><option value="local">On-device (offline)</option></select>  
+  <label>API key (stays on this phone)</label><input id="sKey" type="password" autocomplete="off">  
+  <label>Model</label><input id="sModel" placeholder="claude-sonnet-5-5">  
+  <label>Base URL (OpenAI-compatible)</label><input id="sBase" placeholder="https://api.openai.com/v1">  
+  <label>System prompt</label><textarea id="sSys" rows="3"></textarea>  
+  <h4>Offline</h4>  
+  <label>On-device model</label>  
+  <select id="sLocal">  
+    <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5 0.5B (~400MB)</option>  
+    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B (~700MB)</option>  
+    <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 1.5B (~1GB)</option>  
+    <option value="own">My own model file (.gguf)</option>  
+  </select>  
+  <button class="btn" id="sDl" style="margin-top:8px">Download model for offline use</button>  
+  <button class="btn" id="sOwn" style="margin-top:8px;display:none">Choose a model file…</button>  
+  <div id="dlStat" style="color:var(--mute);font-size:13px;margin-top:4px"></div>  
+  <div id="stStat" style="color:var(--mute);font-size:12px;margin-top:4px"></div>  
+  <h4>Images and video</h4>  
+  <label>Media base URL</label><input id="sMBase">  
+  <label>Media API key (blank = reuse chat key)</label><input id="sMKey" type="password" autocomplete="off">  
+  <label>Image model</label><input id="sImg">  
+  <label>Video model</label><input id="sVid">  
+  <h4>Add-on code (advanced)</h4>  
+  <div style="color:var(--mute);font-size:12px;margin-bottom:6px">Paste JavaScript here to change or extend the app without GitHub. It runs every time the app starts. Only paste code you wrote or got from Claude: it can read your chats and API key.</div>  
+  <textarea id="sAddon" rows="7" spellcheck="false" placeholder="// Example:&#10;app.toast('Hello from my add-on')"></textarea>  
+  <div style="display:flex;gap:8px;margin-top:6px"><button class="btn p" id="sAddonRun">Save &amp; run</button><button class="btn" id="sAddonDel">Remove</button></div>  
+  <div id="addonStat" style="color:var(--mute);font-size:12px;margin-top:4px"></div>  
+  <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">  
+    <button class="btn" id="sExport">Export</button>  
+    <button class="btn" id="sImport">Import</button>  
+    <button class="btn" id="sClear">Delete all</button>  
+    <span style="flex:1"></span>  
+    <button class="btn" id="sCancel">Cancel</button>  
+    <button class="btn p" id="sSave">Save</button>  
+  </div>  
+</dialog>  <script>  
+const $=id=>document.getElementById(id);  
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));  
+/* ---------- storage: settings in localStorage, chats in IndexedDB (no size cap) ---------- */  
+const DB=new Promise(r=>{const q=indexedDB.open('mychat',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>r(q.result)});  
+const idbGet=async k=>{const db=await DB;return new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result)})};  
+const idbSet=async(k,v)=>{const db=await DB;return new Promise(r=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r;t.onerror=r;t.onabort=r})};  
+const idbPut=async(k,v)=>{const db=await DB;return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('storage is full or blocked'))})};  
+const DEF={prov:'anthropic',key:'',model:'claude-sonnet-5-5',base:'https://api.openai.com/v1',sys:'You are a helpful assistant. When asked for code, write complete, working code in fenced code blocks.',auto:true,local:'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',mbase:'https://api.openai.com/v1',mkey:'',img:'gpt-image-1',vid:'sora-2',speak:false,mem:true,learn:true,sum:true,fam:false,concise:false};  
+let cfg=Object.assign({},DEF,(()=>{try{return JSON.parse(localStorage.getItem('cfg'))||{}}catch{return{}}})());  
+let chats=[],mems=[],cur=null,pending=[],docs=[],mode='chat',busy=false,calling=false,ctrl=null,lastErr='',engine=null,engineModel='';  
+const saveChats=()=>idbSet('chats',chats);  
+const saveCfg=()=>localStorage.setItem('cfg',JSON.stringify(cfg));  
+  
+/* ---------- rendering ---------- */  
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));  
+const inline=t=>esc(t).replace(/^#{1,3} (.*)$/gm,'<b class="h">$1</b>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>');  
+function copy(t,btn){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()});btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1200)}  
+function renderText(c,t){  
+  t.split('```').forEach((p,i)=>{  
+    if(i%2===0){if(p.trim()){const d=document.createElement('div');d.className='txt';d.innerHTML=inline(p.replace(/^\n+|\n+$/g,''));c.appendChild(d)}return}  
+    let lang='',code=p;const nl=p.indexOf('\n');  
+    if(nl>=0&&/^[\w+#.-]*$/.test(p.slice(0,nl).trim())){lang=p.slice(0,nl).trim();code=p.slice(nl+1)}  
+    code=code.replace(/\n$/,'');  
+    const w=document.createElement('div');w.className='code';  
+    const h=document.createElement('div');h.className='ch';  
+    const s=document.createElement('span');s.textContent=lang||'code';h.appendChild(s);  
+    if(/^(html|svg)$/i.test(lang)){const b=document.createElement('button');b.textContent='▶ Run';b.onclick=()=>{$('frame').srcdoc=code;$('dRun').showModal()};h.appendChild(b)}  
+    const cb=document.createElement('button');cb.textContent='Copy';cb.onclick=()=>copy(code,cb);h.appendChild(cb);  
+    const pre=document.createElement('pre'),cd=document.createElement('code');cd.textContent=code;pre.appendChild(cd);  
+    w.append(h,pre);c.appendChild(w);  
+  });  
+}  
+function draw(el,m){  
+  el.innerHTML='';  
+  (m.images||[]).forEach(i=>{const im=document.createElement('img');im.className='pic';im.src='data:'+i.type+';base64,'+i.data;el.appendChild(im)});  
+  if(m.video){const url=URL.createObjectURL(m.video);const v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=url;el.appendChild(v);  
+    const a=document.createElement('a');a.className='save';a.href=url;a.download='video.mp4';a.textContent='Save video';el.appendChild(a)}  
+  if(m.text)renderText(el,m.text);  
+  else if(m.role==='assistant'&&busy&&!m.images?.length&&!m.video)el.appendChild(document.createTextNode('…'));  
+}  
+function scrollEnd(){const b=$('msgs');b.scrollTop=b.scrollHeight}  
+function renderMsgs(){  
+  const box=$('msgs');box.innerHTML='';$('title').textContent=cur.title;  
+  if(!cur.msgs.length){  
+    box.innerHTML='<div class="hello"><h2>How can I help you today?</h2><button data-s="Write a complete to-do list web app in one HTML file">💻 Write some code</button><button data-s="Help me understand the photo I\'m about to attach">📷 Help with a photo</button><button data-s="Explain how recursion works with a simple example">🎓 Learn something</button></div>';  
+    box.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{$('input').value=b.dataset.s;$('input').focus()});  
+  }  
+  cur.msgs.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.role;const b=document.createElement('div');b.className='body';d.appendChild(b);box.appendChild(d);draw(b,m)});  
+  scrollEnd();renderChips();  
+}  
+function renderChips(){  
+  const c=$('chips');c.innerHTML='';  
+  pending.forEach((i,n)=>{const d=document.createElement('div');d.className='chip';d.innerHTML='<img src="data:'+i.type+';base64,'+i.data+'"><button class="x">✕</button>';d.querySelector('.x').onclick=()=>{pending.splice(n,1);renderChips()};c.appendChild(d)});  
+  docs.forEach((f,n)=>{const d=document.createElement('div');d.className='chip';d.innerHTML='<div class="doc">📄 '+esc(f.name)+'</div><button class="x">✕</button>';d.querySelector('.x').onclick=()=>{docs.splice(n,1);renderChips()};c.appendChild(d)});  
+}  
+function renderList(){  
+  const q=$('search').value.toLowerCase(),L=$('list');L.innerHTML='';  
+  chats.filter(c=>c.title.toLowerCase().includes(q)).forEach(c=>{  
+    const d=document.createElement('div');d.className='ci'+(c===cur?' on':'');  
+    d.innerHTML='<button class="t"></button><button class="a">✏</button><button class="a">🗑</button>';  
+    const [t,e,x]=d.children;t.textContent=c.title;  
+    t.onclick=()=>{cur=c;closeSide();renderMsgs()};  
+    e.onclick=()=>{const n=prompt('Rename chat',c.title);if(n){c.title=n.slice(0,60);saveChats();renderList();$('title').textContent=cur.title}};  
+    x.onclick=()=>{if(!confirm('Delete this chat?'))return;chats=chats.filter(z=>z!==c);if(!chats.length)newChat();else if(cur===c)cur=chats[0];saveChats();renderList();renderMsgs()};  
+    L.appendChild(d);  
+  });  
+}  
+function openSide(){renderList();$('side').classList.add('open');$('scrim').style.display='block'}  
+function closeSide(){$('side').classList.remove('open');$('scrim').style.display='none'}  
+function newChat(){if(cur&&!cur.msgs.length){closeSide();return}cur={id:Date.now(),title:'New chat',msgs:[]};chats.unshift(cur);saveChats();closeSide();renderMsgs()}  
+function setMode(m){mode=m;const c=$('modeChip');c.style.display=m==='chat'?'none':'';c.textContent=(m==='image'?'🎨 Image':'🎬 Video')+' ✕';$('input').placeholder=m==='chat'?'Message MyChat':'Describe the '+m+'…'}  
+function setSend(){$('send').textContent=busy?'■':'↑'}  
+function autosize(){const i=$('input');i.style.height='auto';i.style.height=Math.min(i.scrollHeight,150)+'px'}  
+  
+/* ---------- voice ---------- */  
+function speak(t,force){  
+  if(!(cfg.speak||force)||!window.speechSynthesis)return Promise.resolve();  
+  const clean=t.replace(/```[\s\S]*?```/g,' code block. ').replace(/[*#`_]/g,'');  
+  return new Promise(r=>{  
+    let done=false,tm=null;  
+    const fin=()=>{if(!done){done=true;clearTimeout(tm);r()}};  
+    tm=setTimeout(fin,Math.min(60000,3000+clean.length*95));  
+    try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(clean);u.onend=fin;u.onerror=fin;speechSynthesis.speak(u)}catch{fin()}  
+  });  
+}  
+let recRef=null,tapResolve=null,callFails=0;  
+function withTimeout(p,ms,onTimeout){return new Promise((res,rej)=>{const t=setTimeout(()=>{try{onTimeout&&onTimeout()}catch{};res('')},ms);p.then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})})}  
+async function listenNative(NP){  
+  try{const av=await NP.available();if(av&&av.available===false){lastErr='This phone has no speech recognition service. Install or enable the Google app, then try again.';return ''}}catch{}  
+  try{  
+    let p=await NP.checkPermissions();  
+    if(p&&p.speechRecognition&&p.speechRecognition!=='granted')p=await NP.requestPermissions();  
+    if(p&&p.speechRecognition&&p.speechRecognition!=='granted'){lastErr='Microphone permission is off. In Android Settings > Apps > MyChat > Permissions, allow Microphone.';return ''}  
+  }catch{}  
+  try{  
+    const r=await withTimeout(NP.start({language:navigator.language||'en-US',maxResults:1,prompt:'Speak now',partialResults:false,popup:false}),15000,()=>{try{NP.stop().catch(()=>{})}catch{}});  
+    return (r&&r.matches&&r.matches[0])||'';  
+  }catch(e){  
+    const msg=String((e&&e.message)||e||'');  
+    if(/no match|no speech|speech timeout|did.?n.?t|not understand|nothing/i.test(msg))return '';  
+    lastErr='Speech error: '+msg;return '';  
+  }  
+}  
+function listenOnce(){  
+  lastErr='';  
+  const NP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition;  
+  if(NP)return listenNative(NP);  
+  return new Promise(res=>{  
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;  
+    if(!SR){lastErr='Voice input is not available in this app build (the speech plugin is missing from the build).';return res('')}  
+    const r=new SR();recRef=r;r.lang=navigator.language||'en-US';let got='';  
+    r.onresult=e=>{got=e.results[0][0].transcript};  
+    r.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')lastErr='Mic error: '+e.error};  
+    r.onend=()=>res(got);  
+    try{r.start()}catch{res('')}  
+  });  
+}  
+async function dictate(){  
+  $('btnMic').textContent='🔴';const t=await listenOnce();$('btnMic').textContent='🎤';  
+  if(t){$('input').value+=(($('input').value?' ':'')+t);autosize()}else if(lastErr)alert(lastErr);else toast("Didn't catch that, try again");  
+}  
+function waitTap(){return new Promise(r=>{tapResolve=r})}  
+async function callLoop(){  
+  while(calling){  
+    if(effProv()!=='local'&&!cfg.key){$('cstat').textContent='No AI set up';$('cerr').textContent='Add an API key in Settings, or set Provider to On-device.';await waitTap();continue}  
+    $('cstat').textContent='Listening…';$('cerr').textContent='';  
+    const t=await listenOnce();  
+    if(!calling)break;  
+    if(lastErr){$('cstat').textContent='Voice problem';$('cerr').textContent=lastErr;await waitTap();continue}  
+    if(!t){  
+      callFails++;  
+      if(callFails>=3){callFails=0;$('cstat').textContent="I can't hear you";$('cerr').textContent='Speak close to the phone, then tap "Tap to talk".';await waitTap()}  
+      continue;  
+    }  
+    callFails=0;  
+    $('cheard').textContent='You: '+t;$('cstat').textContent='Thinking…';  
+    await send({text:t,call:true});  
+    const l=cur.msgs[cur.msgs.length-1];  
+    if(l&&l.err){$('cstat').textContent='Problem';$('cerr').textContent=String(l.text).slice(-300);await waitTap()}  
+  }  
+}  
+function startCall(){calling=true;callFails=0;$('call').style.display='flex';$('cheard').textContent='';$('cerr').textContent='';callLoop()}  
+function endCall(){calling=false;$('call').style.display='none';if(tapResolve){tapResolve();tapResolve=null};try{speechSynthesis.cancel()}catch{};try{recRef&&recRef.abort()}catch{};try{const NP=window.Capacitor.Plugins.SpeechRecognition;NP&&NP.stop().catch(()=>{})}catch{}}  
+  
+/* ---------- models ---------- */  
+let webllm=null,wl=null,wlName='';  
+async function getLib(){if(!webllm)webllm=await import('https://esm.run/@mlc-ai/web-llm');return webllm}  
+async function getEngine(onProg,force){  
+  if(!force&&engine&&engineModel===cfg.local)return engine;  
+  if(!navigator.gpu)throw new Error('This model type needs WebGPU, which this phone/app does not have. In Settings > Offline, choose "My own model file" instead.');  
+  const lib=await getLib();  
+  engine=null;  
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch{}  
+  engine=await lib.CreateMLCEngine(cfg.local,{initProgressCallback:p=>onProg&&onProg(p.text)});  
+  engineModel=cfg.local;  
+  try{localStorage.setItem('saved_'+cfg.local,'1')}catch{}  
+  return engine;  
+}  
+async function getOwn(onProg){  
+  const rec=await idbGet('ownmodel');  
+  if(!rec)throw new Error('No model file chosen yet. Open Settings > Offline > Choose a model file.');  
+  if(wl&&wlName===rec.name)return wl;  
+  onProg('Loading your model file (the first time can take a minute)…');  
+  const base='https://cdn.jsdelivr.net/npm/@wllama/wllama@2/esm/';  
+  const mod=await import(base+'index.js');  
+  const w=new mod.Wllama({'single-thread/wllama.wasm':base+'single-thread/wllama.wasm','multi-thread/wllama.wasm':base+'multi-thread/wllama.wasm'});  
+  await w.loadModel([rec.blob],{n_ctx:4096});  
+  wl=w;wlName=rec.name;return w;  
+}  
+function effProv(){  
+  if(cfg.prov==='local')return 'local';  
+  if(cfg.auto&&(!navigator.onLine||!cfg.key))return 'local';  
+  return cfg.prov;  
+}  
+/* Unlimited chat: nothing is capped; only what is SENT is trimmed to fit the model's context window. */  
+function history(P){  
+  const budget=P==='local'?5000:60000;let used=0;const sel=[];  
+  const ms=cur.msgs.map((m,i)=>({m,i})).filter(x=>!x.m.err&&(x.m.text||(x.m.images&&x.m.images.length)));  
+  for(let k=ms.length-1;k>=0;k--){const m=ms[k].m;const l=(m.text||'').length+((m.images&&m.images.length)||0)*1500;if(used+l>budget&&sel.length)break;used+=l;sel.unshift(ms[k])}  
+  while(sel.length&&sel[0].m.role!=='user')sel.shift();  
+  history.start=sel.length?sel[0].i:cur.msgs.length;  
+  const out=sel.map(x=>x.m);let imgs=0;  
+  for(let i=out.length-1;i>=0;i--){const m=out[i];if(m.role==='user'&&m.images&&m.images.length){imgs++;if(imgs>3)out[i]={...m,images:[]}}else if(m.role==='assistant')out[i]={...m,images:[]}}  
+  return out;  
+}  
+async function sse(resp,onData){  
+  const rd=resp.body.getReader(),dec=new TextDecoder();let buf='';  
+  while(true){  
+    const{done,value}=await rd.read();if(done)break;  
+    buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();  
+    for(const l of lines){if(!l.startsWith('data:'))continue;const p=l.slice(5).trim();if(!p||p==='[DONE]')continue;try{onData(JSON.parse(p))}catch{}}  
+  }  
+}  
+const TOG={sAuto:'auto',sSpeak:'speak',sMem:'mem',sLearn:'learn',sSum:'sum',sFam:'fam',sConcise:'concise'};  
+const memBlock=()=>{let s='';for(let i=mems.length-1;i>=0;i--){const l='- '+mems[i].t+'\n';if(s.length+l.length>2500)break;s=l+s}return s};  
+const sysFor=call=>{  
+  let s=cfg.sys;  
+  if(cfg.fam)s+='\nKeep all responses family-friendly and suitable for all ages.';  
+  if(cfg.concise)s+='\nBe concise.';  
+  if(cfg.mem&&mems.length)s+='\n\nWhat you know about the user from saved memory (use when relevant, do not recite unprompted):\n'+memBlock();  
+  if(cfg.sum&&cur&&cur.summary)s+='\n\nNotes on the earlier part of this conversation:\n'+cur.summary;  
+  if(call)s+='\nYou are in a live voice call. Reply in one to three short, natural spoken sentences. No markdown, no code blocks.';  
+  return s;  
+};  
+function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.opacity=0,2500)}  
+function addMem(t){t=t.trim().replace(/[.!]+$/,'');if(!t||mems.some(z=>z.t.toLowerCase()===t.toLowerCase()))return false;mems.push({t,id:Date.now()+mems.length});idbSet('mems',mems);toast('Remembered: '+t.slice(0,60));return true}  
+function renderMems(){  
+  const L=$('memList');L.innerHTML='';  
+  if(!mems.length)L.innerHTML='<div style="color:var(--mute)">Nothing saved yet.</div>';  
+  mems.forEach((m,n)=>{const d=document.createElement('div');d.className='mi';d.innerHTML='<span></span><button class="a">✕</button>';d.firstChild.textContent=m.t;d.lastChild.onclick=()=>{mems.splice(n,1);idbSet('mems',mems);renderMems()};L.appendChild(d)});  
+}  
+function openMem(){closeSide();if($('dSet').open)$('dSet').close();renderMems();$('dMem').showModal()}  
+async function ask(P,system,user,max){  
+  if(P==='anthropic'){  
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.model,max_tokens:max,system,messages:[{role:'user',content:user}]})});  
+    if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.content||[]).map(c=>c.text||'').join('').trim();  
+  }  
+  const r=await fetch(cfg.base.replace(/\/$/,'')+'/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,max_tokens:max,messages:[{role:'system',content:system},{role:'user',content:user}]})});  
+  if(!r.ok)throw new Error(r.status);const j=await r.json();return(j.choices[0].message.content||'').trim();  
+}  
+/* Long-chat memory: older messages that no longer fit are folded into a running summary. */  
+async function ensureSummary(P){  
+  if(!cfg.sum||P==='local'||!cfg.key)return;  
+  history(P);const end=history.start,from=cur.sumUpTo||0;  
+  if(end<=from)return;  
+  const chunk=cur.msgs.slice(from,end).filter(m=>!m.err&&m.text).map(m=>(m.role==='user'?'User: ':'Assistant: ')+m.text.slice(0,2000)).join('\n').slice(-14000);  
+  if(!chunk){cur.sumUpTo=end;return}  
+  try{  
+    const t=await ask(P,'You compress conversations into short working notes.','Previous notes:\n'+(cur.summary||'(none)')+'\n\nNew messages to fold in:\n'+chunk+'\n\nWrite the updated notes (max 250 words): facts about the user, decisions, goals, code written (names and purpose) and open tasks.',600);  
+    if(t){cur.summary=t;cur.sumUpTo=end}  
+  }catch{}  
+}  
+/* Cross-chat memory: pull durable facts about the user out of what they said. */  
+async function learn(userText,P){  
+  if(!cfg.mem||!cfg.learn||P==='local'||!cfg.key||userText.length<8)return;  
+  try{  
+    const r=await ask(P,'You extract long-term memory facts about a user. Reply with ONLY a JSON array of short strings.','Existing memories:\n'+(mems.map(m=>'- '+m.t).join('\n')||'(none)')+'\n\nUser message:\n'+userText.slice(0,1500)+'\n\nList NEW durable facts worth remembering for future chats (name, preferences, projects, skills, goals, how they like answers). Skip anything already known and one-off requests. Never store passwords, API keys, payment card numbers or government ID numbers. Return [] if there is nothing.',200);  
+    const m=r.match(/\[[\s\S]*\]/);if(!m)return;  
+    JSON.parse(m[0]).filter(x=>typeof x==='string'&&x.trim()&&x.length<200).slice(0,5).forEach(t=>{if(mems.length<150)addMem(t)});  
+  }catch{}  
+}  
+async function runCloud(P,out,el,call){  
+  const hist=history(P);let url,headers,body;  
+  if(P==='anthropic'){  
+    url='https://api.anthropic.com/v1/messages';  
+    headers={'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};  
+    body={model:cfg.model,max_tokens:8192,stream:true,system:sysFor(call),messages:hist.map(m=>{  
+      const c=(m.images||[]).map(i=>({type:'image',source:{type:'base64',media_type:i.type,data:i.data}}));if(m.text)c.push({type:'text',text:m.text});return{role:m.role,content:c}})};  
+  }else{  
+    url=cfg.base.replace(/\/$/,'')+'/chat/completions';  
+    headers={'content-type':'application/json',authorization:'Bearer '+cfg.key};  
+    body={model:cfg.model,stream:true,messages:[{role:'system',content:sysFor(call)},...hist.map(m=>{  
+      const c=(m.images||[]).map(i=>({type:'image_url',image_url:{url:'data:'+i.type+';base64,'+i.data}}));if(m.text)c.push({type:'text',text:m.text});return{role:m.role,content:c}})]};  
+  }  
+  const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:ctrl.signal});  
+  if(!r.ok)throw new Error(r.status+' '+await r.text());  
+  await sse(r,j=>{  
+    const t=P==='anthropic'?(j.type==='content_block_delta'?j.delta.text||'':''):(j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content||'');  
+    if(t){out.text+=t;draw(el,out);scrollEnd()}  
+  });  
+}  
+async function runLocal(out,el,call){  
+  const prog=s=>{el.textContent=s;if(calling)$('cstat').textContent=String(s).slice(0,90)};  
+  el.textContent='Loading on-device model…';  
+  const turns=history('local').filter(m=>m.text).map(m=>({role:m.role,content:m.text}));  
+  if(cfg.local==='own'){  
+    const w=await getOwn(prog);  
+    await w.createChatCompletion([{role:'system',content:sysFor(call)},...turns],{nPredict:1024,sampling:{temp:0.7},abortSignal:ctrl.signal,onNewToken:(tok,piece,txt)=>{out.text=txt;draw(el,out);scrollEnd()}});  
+    return;  
+  }  
+  const msgs=[{role:'system',content:sysFor(call)},...turns];  
+  for(let attempt=0;attempt<2;attempt++){  
+    try{  
+      const eng=await getEngine(prog,attempt>0);  
+      const st=await eng.chat.completions.create({messages:msgs,stream:true,max_tokens:4096});  
+      for await(const ch of st){if(ctrl.signal.aborted)break;const t=ch.choices[0]&&ch.choices[0].delta&&ch.choices[0].delta.content||'';if(t){out.text+=t;draw(el,out);scrollEnd()}}  
+      return;  
+    }catch(e){  
+      if(attempt===0&&!out.text&&/not loaded|reload|lost|destroy|dispos/i.test(String((e&&e.message)||e))){engine=null;continue}  
+      throw e;  
+    }  
+  }  
+}  
+const mHeaders=()=>({authorization:'Bearer '+(cfg.mkey||(cfg.prov!=='anthropic'?cfg.key:''))});  
+const mBase=()=>cfg.mbase.replace(/\/$/,'');  
+async function genImage(prompt,out,el){  
+  if(!navigator.onLine)throw new Error('Image generation needs internet.');  
+  if(!mHeaders().authorization.slice(7))throw new Error('Add a media API key in Settings → Images and video.');  
+  el.textContent='Generating image…';  
+  const r=await fetch(mBase()+'/images/generations',{method:'POST',headers:{...mHeaders(),'content-type':'application/json'},body:JSON.stringify({model:cfg.img,prompt,n:1}),signal:ctrl.signal});  
+  if(!r.ok)throw new Error(r.status+' '+await r.text());  
+  const d=(await r.json()).data[0];  
+  if(d.b64_json)out.images=[{type:'image/png',data:d.b64_json}];  
+  else if(d.url){const b=await(await fetch(d.url)).blob();out.images=[await blobToImg(b)]}  
+  out.text='Here is your image.';  
+}  
+async function genVideo(prompt,out,el){  
+  if(!navigator.onLine)throw new Error('Video generation needs internet.');  
+  if(!mHeaders().authorization.slice(7))throw new Error('Add a media API key in Settings → Images and video.');  
+  el.textContent='Starting video…';  
+  let r=await fetch(mBase()+'/videos',{method:'POST',headers:{...mHeaders(),'content-type':'application/json'},body:JSON.stringify({model:cfg.vid,prompt,seconds:'8',size:'1280x720'}),signal:ctrl.signal});  
+  if(!r.ok)throw new Error(r.status+' '+await r.text());  
+  let j=await r.json();  
+  while(j.status==='queued'||j.status==='in_progress'){  
+    el.textContent='Generating video… '+(j.progress!=null?j.progress+'%':'this can take a few minutes');  
+    await sleep(5000);if(ctrl.signal.aborted)throw new DOMException('stop','AbortError');  
+    r=await fetch(mBase()+'/videos/'+j.id,{headers:mHeaders(),signal:ctrl.signal});  
+    if(!r.ok)throw new Error(r.status+' '+await r.text());j=await r.json();  
+  }  
+  if(j.status!=='completed')throw new Error('Video failed: '+(j.error&&j.error.message||j.status));  
+  r=await fetch(mBase()+'/videos/'+j.id+'/content',{headers:mHeaders(),signal:ctrl.signal});  
+  if(!r.ok)throw new Error(r.status+' '+await r.text());  
+  out.video=await r.blob();out.text='Here is your video.';  
+}  
+  
+/* ---------- files and camera ---------- */  
+const blobToImg=f=>new Promise(res=>{const r=new FileReader();r.onload=()=>res({type:f.type||'image/png',data:r.result.split(',')[1]});r.readAsDataURL(f)});  
+async function photo(f){  
+  const url=URL.createObjectURL(f);  
+  const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});  
+  const s=Math.min(1,1568/Math.max(im.width,im.height));  
+  const c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);  
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);  
+  return{type:'image/jpeg',data:c.toDataURL('image/jpeg',.85).split(',')[1]};  
+}  
+async function addFiles(files){  
+  for(const f of files){  
+    try{  
+      if(f.type.startsWith('image/'))pending.push(await photo(f));  
+      else docs.push({name:f.name,text:(await f.text()).slice(0,60000)});  
+    }catch{alert('Could not read '+f.name)}  
+  }  
+  renderChips();  
+}  
+  
+/* ---------- send ---------- */  
+async function send(o={}){  
+  if(busy){if(ctrl)ctrl.abort();return ''}  
+  let text=(o.text!==undefined?o.text:$('input').value).trim();  
+  if(!text&&!pending.length&&!docs.length)return '';  
+  const P=effProv(),m0=mode;  
+  if(m0==='chat'&&P!=='local'&&!cfg.key){openSettings();return ''}  
+  const raw=text;  
+  const mm=cfg.mem&&raw.match(/^(?:please\s+)?remember(?:\s+that)?\s+(.{3,200})$/i);if(mm)addMem(mm[1]);  
+  docs.forEach(d=>{text='File: '+d.name+'\n```\n'+d.text+'\n```\n'+text});  
+  cur.msgs.push({role:'user',text,images:pending});  
+  if(cur.title==='New chat'&&text)cur.title=text.replace(/```[\s\S]*?```/g,'').trim().slice(0,40)||'Chat';  
+  pending=[];docs=[];setMode('chat');$('input').value='';autosize();  
+  const out={role:'assistant',text:''};cur.msgs.push(out);  
+  busy=true;setSend();renderMsgs();  
+  const el=$('msgs').lastChild.querySelector('.body');  
+  ctrl=new AbortController();  
+  try{  
+    if(m0==='image')await genImage(text,out,el);  
+    else if(m0==='video')await genVideo(text,out,el);  
+    else if(P==='local')await runLocal(out,el,o.call);  
+    else{await ensureSummary(P);await runCloud(P,out,el,o.call)}  
+  }catch(e){if(e.name!=='AbortError'){out.text+=(out.text?'\n':'')+'⚠ '+e.message;out.err=true}}  
+  busy=false;setSend();draw(el,out);scrollEnd();await saveChats();  
+  if(!out.err&&m0==='chat')learn(raw,P);  
+  if(!out.err){if(o.call){$('cstat').textContent='Speaking…';$('cheard').textContent='AI: '+out.text.slice(0,400);await speak(out.text,true)}else if(cfg.speak)speak(out.text)}  
+  return out.text;  
+}  
+  
+/* ---------- settings ---------- */  
+function openSettings(){  
+  closeSide();  
+  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
+  for(const k in f)$(k).value=cfg[f[k]];  
+  for(const k in TOG)$(k).checked=cfg[TOG[k]];$('sAddon').value=localStorage.getItem('addon')||'';$('addonStat').textContent='';refreshOffStatus(cfg.local);$('dSet').showModal();  
+}  
+$('sSave').onclick=()=>{  
+  const f={sProv:'prov',sKey:'key',sModel:'model',sBase:'base',sSys:'sys',sLocal:'local',sMBase:'mbase',sMKey:'mkey',sImg:'img',sVid:'vid'};  
+  for(const k in f)cfg[f[k]]=$(k).value.trim();  
+  saveCfg();$('dSet').close();  
+};  
+$('sCancel').onclick=()=>$('dSet').close();  
+function syncOffUI(v){const own=v==='own';$('sDl').style.display=own?'none':'';$('sOwn').style.display=own?'':'none'}  
+async function storageInfo(){  
+  let s='';  
+  try{  
+    if(navigator.storage&&navigator.storage.persist){  
+      let p=await navigator.storage.persisted();if(!p)p=await navigator.storage.persist();  
+      s+=p?'Storage: protected from automatic cleanup. ':'Storage: Android may clear it if the phone runs very low on space. ';  
+    }  
+    if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();s+='App data: '+Math.round((e.usage||0)/1048576)+' MB.'}  
+  }catch{}  
+  return s;  
+}  
+async function refreshOffStatus(v){  
+  v=v||$('sLocal').value||cfg.local;syncOffUI(v);let msg;  
+  if(v==='own'){  
+    const rec=await idbGet('ownmodel');  
+    msg=rec?'✓ Saved on this phone: '+rec.name+' ('+Math.round(rec.size/1048576)+' MB). Works with no internet.':'No file chosen yet. Tap "Choose a model file" (GGUF format).';  
+  }else{  
+    let saved=localStorage.getItem('saved_'+v)==='1';  
+    try{if(webllm&&await webllm.hasModelInCache(v)){saved=true;localStorage.setItem('saved_'+v,'1')}}catch{}  
+    msg=saved?'✓ Saved on this phone. Works with no internet.':'Not downloaded yet.';  
+    if(!navigator.gpu)msg+=' (This phone/app has no WebGPU, so these built-in models cannot run. Use "My own model file".)';  
+  }  
+  $('dlStat').textContent=msg;$('stStat').textContent=await storageInfo();  
+}  
+$('sLocal').onchange=()=>refreshOffStatus($('sLocal').value);  
+$('sDl').onclick=async()=>{  
+  cfg.local=$('sLocal').value;saveCfg();$('stStat').textContent='';  
+  try{await getEngine(s=>$('dlStat').textContent=s,true);$('dlStat').textContent='✓ Downloaded and saved on this phone. It stays after you close the app.';$('stStat').textContent=await storageInfo()}  
+  catch(e){$('dlStat').textContent='⚠ '+e.message}  
+};  
+$('sOwn').onclick=()=>$('fOwn').click();  
+$('fOwn').onchange=async e=>{  
+  const f=e.target.files[0];e.target.value='';if(!f)return;  
+  $('dlStat').textContent='Saving '+f.name+'… (big files take a minute)';  
+  try{  
+    await idbPut('ownmodel',{name:f.name,size:f.size,blob:f});  
+    wl=null;wlName='';cfg.local='own';$('sLocal').value='own';saveCfg();  
+    await refreshOffStatus('own');  
+  }catch(err){$('dlStat').textContent='⚠ Could not save that file: '+err.message}  
+};  
+const PERCH='https://perchance.org/ai-text-to-image-generator';  
+function openPerch(){const fr=$('perchFrame');if(!fr.getAttribute('src'))fr.src=PERCH;$('dPerch').showModal()}  
+$('perchOpen').onclick=()=>window.open(PERCH,'_blank');  
+$('perchClose').onclick=()=>$('dPerch').close();  
+/* Add-on code: runs at startup. If it freezes the app, it is skipped next launch. */  
+function runAddon(code,silent){  
+  const st=$('addonStat');  
+  try{new Function('app',code)({$,cfg,get chat(){return cur},get chats(){return chats},send,toast,addMem,saveCfg,saveChats,renderMsgs,speak});if(st)st.textContent='✓ Ran without errors.'}  
+  catch(e){if(st)st.textContent='⚠ '+e.message;if(!silent)toast('Add-on error: '+e.message)}  
+}  
+function bootAddon(){  
+  const code=localStorage.getItem('addon')||'';if(!code.trim())return;  
+  if(localStorage.getItem('addonBoot')==='1'){localStorage.setItem('addonSkip','1');localStorage.removeItem('addonBoot')}  
+  if(localStorage.getItem('addonSkip')==='1'){toast('Add-on skipped because it froze the app. Fix or remove it in Settings.');return}  
+  localStorage.setItem('addonBoot','1');  
+  runAddon(code,true);  
+  setTimeout(()=>localStorage.removeItem('addonBoot'),3000);  
+}  
+$('sAddonRun').onclick=()=>{const c=$('sAddon').value;localStorage.setItem('addon',c);localStorage.removeItem('addonSkip');localStorage.removeItem('addonBoot');runAddon(c)};  
+$('sAddonDel').onclick=()=>{localStorage.removeItem('addon');localStorage.removeItem('addonSkip');$('sAddon').value='';$('addonStat').textContent='Removed. Restart the app to undo its changes.'};  
+$('sClear').onclick=()=>{if(confirm('Delete ALL chats?')){chats=[];cur=null;$('dSet').close();newChat();saveChats()}};  
+$('sExport').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({v:2,chats:chats.map(c=>({title:c.title,summary:c.summary,msgs:c.msgs.map(m=>({role:m.role,text:m.text}))})),mems:mems.map(m=>m.t)},null,1)],{type:'application/json'}));a.download='mychat-backup.json';a.click()};  
+$('sImport').onclick=()=>$('fImp').click();  
+$('fImp').onchange=async e=>{  
+  const f=e.target.files[0];e.target.value='';if(!f)return;  
+  try{  
+    const j=JSON.parse(await f.text());const cs=Array.isArray(j)?j:(j.chats||[]);let n=0;  
+    cs.forEach(c=>{if(c&&Array.isArray(c.msgs)){chats.push({id:Date.now()+Math.random(),title:String(c.title||'Imported chat'),summary:c.summary,msgs:c.msgs.filter(m=>m&&(m.role==='user'||m.role==='assistant')).map(m=>({role:m.role,text:String(m.text||''),images:[]}))});n++}});  
+    (j.mems||[]).forEach(m=>addMem(typeof m==='string'?m:(m&&m.t)||''));  
+    await saveChats();renderList();toast('Imported '+n+' chats');  
+  }catch{alert('That file is not a MyChat backup.')}  
+};  
+  
+/* ---------- wiring ---------- */  
+$('send').onclick=()=>send();  
+$('input').addEventListener('input',autosize);  
+$('btnMenu').onclick=openSide;$('sideClose').onclick=closeSide;$('scrim').onclick=()=>{closeSide();$('menu').style.display='none'};  
+$('btnNew').onclick=newChat;$('sNew').onclick=newChat;$('sSet').onclick=openSettings;  
+$('search').oninput=renderList;  
+for(const k in TOG)$(k).onchange=()=>{cfg[TOG[k]]=$(k).checked;saveCfg()};  
+$('sMem2').onclick=openMem;$('sMemBtn').onclick=openMem;$('memClose').onclick=()=>$('dMem').close();  
+$('memAdd').onclick=()=>{if(addMem($('memIn').value)){$('memIn').value='';renderMems()}};  
+$('memIn').onkeydown=e=>{if(e.key==='Enter')$('memAdd').click()};  
+$('memClear').onclick=()=>{if(confirm('Delete all memories?')){mems=[];idbSet('mems',mems);renderMems()}};  
+$('btnMic').onclick=dictate;$('btnCall').onclick=startCall;$('cEnd').onclick=endCall;$('cTalk').onclick=()=>{try{speechSynthesis.cancel()}catch{};if(tapResolve){tapResolve();tapResolve=null}};  
+$('runClose').onclick=()=>{$('frame').srcdoc='';$('dRun').close()};  
+$('btnPlus').onclick=()=>{const m=$('menu');m.style.display=m.style.display==='block'?'none':'block'};  
+$('modeChip').onclick=()=>setMode('chat');  
+$('menu').onclick=e=>{  
+  const a=e.target.dataset.a;if(!a)return;$('menu').style.display='none';  
+  if(a==='cam')$('fCam').click();else if(a==='up')$('fUp').click();else if(a==='perch')openPerch();  
+  else{setMode(a);$('input').focus()}  
+};  
+$('fCam').onchange=async e=>{await addFiles(e.target.files);e.target.value=''};  
+$('fUp').onchange=async e=>{await addFiles(e.target.files);e.target.value=''};  
+document.addEventListener('click',e=>{if(!e.target.closest('#menu,#btnPlus'))$('menu').style.display='none'});  
+window.addEventListener('paste',e=>{const fs=[...(e.clipboardData&&e.clipboardData.files||[])];if(fs.length)addFiles(fs)});  
+  
+const AppP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;  
+if(AppP)AppP.addListener('backButton',()=>{  
+  const d=[...document.querySelectorAll('dialog')].find(x=>x.open);  
+  if(calling)endCall();  
+  else if(d)d.close();  
+  else if($('menu').style.display==='block')$('menu').style.display='none';  
+  else if($('side').classList.contains('open'))closeSide();  
+  else AppP.minimizeApp();  
+});  
+(async()=>{  
+  chats=(await idbGet('chats'))||[];mems=(await idbGet('mems'))||[];  
+  if(chats.length)cur=chats[0];else newChat();  
+  renderMsgs();  
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch{}  
+  bootAddon();  
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});  
+})();  
+</script>  </body>  
+</html>  
