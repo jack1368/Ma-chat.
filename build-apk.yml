@@ -1,0 +1,31 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm install
+      - run: npx cap add android
+      - run: |
+          M=android/app/src/main/AndroidManifest.xml
+          for P in RECORD_AUDIO CAMERA MODIFY_AUDIO_SETTINGS INTERNET; do
+            grep -q "android.permission.$P" $M || sed -i "s#<application#<uses-permission android:name=\"android.permission.$P\" />\n    <application#" $M
+          done
+          sed -i 's#<application#<uses-feature android:name="android.hardware.camera" android:required="false" />\n    <application#' $M
+      - run: npx cap sync android
+      - run: cd android && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyChat-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
