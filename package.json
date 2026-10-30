@@ -7,6 +7,7 @@
     "@capacitor/cli": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor-community/speech-recognition": "^6.0.0",
-    "@capacitor/app": "^6.0.0"
+    "@capacitor/app": "^6.0.0",
+    "capacitor-edge-tts": "^1.0.1"
   }
 }
