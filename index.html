@@ -209,6 +209,10 @@ input.sw:checked:before{transform:translateX(18px)}
     <button class="btn p" id="sSave">Save</button>
   </div>
 </dialog>
+
+<!-- eSpeak NG JavaScript library (open source, GPLv3) -->
+<script src="https://cdn.jsdelivr.net/espeakng.js/latest/espeakng.min.js"></script>
+
 <script>
 const $=id=>document.getElementById(id);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -284,35 +288,53 @@ function setMode(m){mode=m;const c=$('modeChip');c.style.display=m==='chat'?'non
 function setSend(){$('send').textContent=busy?'■':'↑'}
 function autosize(){const i=$('input');i.style.height='auto';i.style.height=Math.min(i.scrollHeight,150)+'px'}
 
-/* ---------- voice ---------- */
-let voicesReady = false;
-let allVoices = [];
-function loadVoices() {
-  if (!window.speechSynthesis) return;
-  allVoices = speechSynthesis.getVoices() || [];
-  voicesReady = allVoices.length > 0;
-}
-if (window.speechSynthesis) {
-  loadVoices();
-  try { speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch {}
-  speechSynthesis.onvoiceschanged = loadVoices;
+/* ---------- voice: eSpeak NG (open source, works offline) ---------- */
+let espeak = null;
+let espeakReady = false;
+let espeakVoices = [];
+let audioCtx = null;
+
+function initAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
 }
 
-function pickVoice(lang) {
-  const want = (lang || navigator.language || 'en-US').toLowerCase();
-  const exact = allVoices.find(v => v.lang.toLowerCase() === want);
-  const prefix = allVoices.find(v => v.lang.toLowerCase().startsWith(want.split('-')[0]));
-  const local = allVoices.find(v => v.localService);
-  return exact || prefix || local || allVoices[0] || null;
+// Initialize eSpeak NG
+if (typeof eSpeakNG !== 'undefined') {
+  try {
+    espeak = new eSpeakNG(
+      'https://cdn.jsdelivr.net/espeakng.js/latest/espeakng.worker.js',
+      function() {
+        espeakReady = true;
+        espeak.list_voices(function(voices) {
+          espeakVoices = voices || [];
+        });
+        console.log('eSpeak NG ready');
+      }
+    );
+  } catch (e) {
+    console.warn('eSpeak NG failed to init:', e);
+  }
 }
 
+// Pick an English voice
+function pickEspeakVoice() {
+  if (!espeakVoices.length) return 'en';
+  const en = espeakVoices.find(v => v === 'en' || v === 'en-us' || v.startsWith('en'));
+  return en || espeakVoices[0];
+}
+
+// Unlock audio on first gesture (required by Android WebView)
 let speechUnlocked = false;
 function unlockSpeech() {
-  if (speechUnlocked || !window.speechSynthesis) return;
+  if (speechUnlocked) return;
   try {
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    speechSynthesis.speak(u);
+    initAudioContext();
     speechUnlocked = true;
   } catch {}
 }
@@ -320,13 +342,34 @@ function unlockSpeech() {
   document.addEventListener(ev, unlockSpeech, { once:true, passive:true })
 );
 
+// Play raw audio samples via Web Audio API
+function playSamples(samples, sampleRate) {
+  return new Promise(resolve => {
+    try {
+      const ctx = initAudioContext();
+      const buffer = ctx.createBuffer(1, samples.length, sampleRate || 22050);
+      const channel = buffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) {
+        channel[i] = samples[i];
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.onended = resolve;
+      source.start(0);
+      // Fallback if onended never fires
+      setTimeout(resolve, (samples.length / (sampleRate || 22050)) * 1000 + 500);
+    } catch (e) {
+      console.warn('playSamples error:', e);
+      resolve();
+    }
+  });
+}
+
 let speakQueue = Promise.resolve();
 function speak(t, force) {
   if (!(cfg.speak || force)) return Promise.resolve();
-  if (!window.speechSynthesis) {
-    lastErr = 'This device has no speech synthesis.';
-    return Promise.resolve();
-  }
+
   const clean = t
     .replace(/```[\s\S]*?```/g, ' code block. ')
     .replace(/`[^`]*`/g, ' ')
@@ -335,44 +378,50 @@ function speak(t, force) {
   if (!clean) return Promise.resolve();
 
   speakQueue = speakQueue.then(() => new Promise(resolve => {
-    let finished = false;
-    const done = () => { if (!finished) { finished = true; resolve(); } };
-    const watchdog = setTimeout(done, Math.min(90000, 4000 + clean.length * 110));
-    try {
-      speechSynthesis.cancel();
-      setTimeout(() => {
+    // Try eSpeak NG first
+    if (espeak && espeakReady) {
+      try {
+        const voice = pickEspeakVoice();
+        espeak.set_voice(voice);
+        espeak.set_rate(175);
+        espeak.set_pitch(50);
+        espeak.synthesize(clean, function(samples, events) {
+          if (samples && samples.length) {
+            playSamples(samples, 22050).then(resolve);
+          } else {
+            resolve();
+          }
+        });
+        return;
+      } catch (e) {
+        console.warn('eSpeak synthesize error:', e);
+      }
+    }
+
+    // Fallback: browser speechSynthesis (may be silent in WebView)
+    if (window.speechSynthesis) {
+      try {
+        speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(clean);
         u.lang = navigator.language || 'en-US';
-        const voice = pickVoice(u.lang);
-        if (voice) u.voice = voice;
-        u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
-        u.onend = () => { clearTimeout(watchdog); done(); };
-        u.onerror = (e) => {
-          if (e.error && !/interrupted|canceled/i.test(e.error)) lastErr = 'Speech error: ' + e.error;
-          clearTimeout(watchdog);
-          done();
-        };
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
         speechSynthesis.speak(u);
-        setTimeout(() => {
-          if (!speechSynthesis.speaking) { clearTimeout(watchdog); done(); }
-        }, 500);
-      }, 60);
-    } catch (e) {
-      lastErr = 'Speech start error: ' + e.message;
-      clearTimeout(watchdog);
-      done();
+        setTimeout(resolve, Math.min(60000, 3000 + clean.length * 100));
+        return;
+      } catch {}
     }
+
+    // Nothing worked
+    lastErr = 'No TTS engine available.';
+    resolve();
   }));
   return speakQueue;
 }
 
 function primeVoices() {
-  if (!window.speechSynthesis) return;
-  try { speechSynthesis.cancel(); } catch {}
-  loadVoices();
-  if (!voicesReady) {
-    try { speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } catch {}
-  }
+  // Ensure audio context is unlocked before a call starts
+  unlockSpeech();
 }
 
 let recRef=null,tapResolve=null,callFails=0;
