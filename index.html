@@ -1,452 +1,543 @@
-<!-- ---------- CSS STYLES ---------- -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#faf9f5">
+<link rel="manifest" href="manifest.json">
+<title>MyChat</title>
 <style>
-  #appEditor { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; }
-  #appEditor textarea { width: 100%; min-height: 260px; resize: vertical; background: var(--code); color: #eeece4; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font: 13px/1.5 ui-monospace, monospace; }
-  #appEditor select, #appEditor input { width: 100%; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px; font: inherit; }
-  .edButtons { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
-  .edButtons button { padding: 9px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); cursor: pointer; }
-  .edButtons .edSave { background: #238636; color: white; font-weight: 600; }
-  #edPreview { display: none; width: 100%; max-height: 300px; object-fit: contain; background: var(--panel); border-radius: 10px; margin-top: 8px; }
-  #edInfo { font-size: 12px; color: var(--mute); margin-top: 7px; white-space: pre-wrap; }
+:root{
+  --bg:#faf9f5;--panel:#f0eee6;--card:#fff;--text:#1f1e1d;--mute:#73726c;
+  --line:#e3e0d5;--accent:#c96442;--user:#ece9de;--code:#2b2a28;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#262624;--panel:#1f1e1d;--card:#30302e;--text:#eeece4;
+  --mute:#a09f97;--line:#3d3d3a;--user:#393937}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:16px/1.55 system-ui,-apple-system,Roboto,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}
+header{display:flex;align-items:center;gap:6px;
+  padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
+header h1{flex:1;margin:0;font-size:16px;font-weight:600;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:20px}
+.ib:active{background:var(--panel)}
+#msgs{flex:1;overflow-y:auto;padding:8px 16px 16px;display:flex;
+  flex-direction:column;gap:18px}
+.msg.user{align-self:flex-end;max-width:85%;background:var(--user);
+  border-radius:18px;padding:9px 14px}
+.msg.assistant{align-self:stretch}
+.msg.assistant .body:before{content:"✺";color:var(--accent);margin-right:6px}
+.body img.pic{max-width:100%;max-height:340px;border-radius:12px;
+  display:block;margin:4px 0}
+.body video{max-width:100%;border-radius:12px;display:block;margin:4px 0}
+.txt{white-space:pre-wrap;word-wrap:break-word}
+.txt b.h{font-size:1.08em}
+.txt code{background:var(--panel);padding:1px 5px;border-radius:5px;
+  font:14px ui-monospace,monospace}
+.code{background:var(--code);color:#eeece4;border-radius:12px;margin:8px 0;overflow:hidden}
+.ch{display:flex;align-items:center;gap:12px;padding:6px 12px;
+  background:#00000040;font-size:13px;color:#b8b6ac}
+.ch span{flex:1}.ch button{color:#eeece4;font-size:13px}
+.code pre{margin:0;padding:12px;overflow-x:auto}
+.code code{font:13.5px/1.5 ui-monospace,monospace;white-space:pre}
+.save{font-size:13px;color:var(--accent)}
+.hello{margin:auto;text-align:center;padding:24px;color:var(--mute)}
+
+/* ---------- Settings / App Editor ---------- */
+#appEditor{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
+#appEditor textarea{width:100%;min-height:260px;resize:vertical;
+  background:var(--code);color:#eeece4;border:1px solid var(--line);
+  border-radius:10px;padding:12px;font:13px/1.5 ui-monospace,monospace}
+#appEditor select,#appEditor input{width:100%;background:var(--card);
+  color:var(--text);border:1px solid var(--line);border-radius:10px;
+  padding:9px;font:inherit}
+#appEditor label{display:block;margin-top:10px;margin-bottom:4px;
+  font-size:13px;color:var(--mute)}
+.edButtons{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.edButtons button{padding:9px 12px;border-radius:10px;background:var(--panel);
+  border:1px solid var(--line);color:var(--text);cursor:pointer}
+.edButtons .edSave{background:#238636;color:white;font-weight:600}
+#edPreview{display:none;width:100%;max-height:300px;object-fit:contain;
+  background:var(--panel);border-radius:10px;margin-top:8px}
+#edInfo{font-size:12px;color:var(--mute);margin-top:7px;white-space:pre-wrap}
 </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="ib" id="dSetOpen" title="Settings">⚙</button>
+    <h1 id="appTitle">MyChat</h1>
+    <button class="ib" title="New chat">＋</button>
+  </header>
 
-<!-- ---------- HTML MARKUP ---------- -->
-<h3 style="margin:0">Settings</h3>
-<h4>App identity</h4>
-<label for="sAppName">App name</label>
-<input id="sAppName" placeholder="MyChat">
-
-<h4>App Editor</h4>
-<div style="color:var(--mute);font-size:12px;margin-bottom:8px">
-  View and edit your project files. Every save creates a version that you can inspect or restore later.
+  <main id="msgs">
+    <div class="hello">Welcome to MyChat</div>
+  </main>
 </div>
 
-<div id="appEditor">
-  <label for="edFile">Choose a file</label>
-  <select id="edFile"></select>
+<!-- ---------- Settings dialog ---------- -->
+<dialog id="dSet">
+  <h3 style="margin:0">Settings</h3>
 
-  <div class="edButtons">
-    <button id="edEdit" type="button">✏ Edit</button>
-    <button id="edImport" type="button">＋ Import files</button>
-    <button id="edExport" type="button">Export file</button>
-    <button id="edExportAll" type="button">Export project backup</button>
+  <h4>App identity</h4>
+  <label for="sAppName">App name</label>
+  <input id="sAppName" placeholder="MyChat">
+  <button id="sSave" type="button">Save</button>
+
+  <h4>App Editor</h4>
+  <div style="color:var(--mute);font-size:12px;margin-bottom:8px">
+    View and edit your project files. Every save creates a version that you can
+    inspect or restore later.
   </div>
 
-  <label for="edCode">File contents</label>
-  <textarea id="edCode" spellcheck="false" readonly placeholder="Choose a file to view its contents"></textarea>
-  <img id="edPreview" alt="Selected image preview">
+  <div id="appEditor">
+    <label for="edFile">Choose a file</label>
+    <select id="edFile"></select>
 
-  <div class="edButtons">
-    <button class="edSave" id="edSave" type="button" disabled>Save new version</button>
-    <button id="edCancel" type="button">Cancel edit</button>
+    <div class="edButtons">
+      <button id="edEdit" type="button">✏ Edit</button>
+      <button id="edImport" type="button">＋ Import files</button>
+      <button id="edExport" type="button">Export file</button>
+      <button id="edExportAll" type="button">Export project backup</button>
+    </div>
+
+    <label for="edCode">File contents</label>
+    <textarea id="edCode" spellcheck="false" readonly
+      placeholder="Choose a file to view its contents"></textarea>
+    <img id="edPreview" alt="Selected image preview">
+
+    <div class="edButtons">
+      <button class="edSave" id="edSave" type="button" disabled>Save new version</button>
+      <button id="edCancel" type="button">Cancel edit</button>
+    </div>
+
+    <label for="edHistory">Version history</label>
+    <select id="edHistory">
+      <option value="">No versions yet</option>
+    </select>
+
+    <div class="edButtons">
+      <button id="edRestore" type="button">Restore selected version</button>
+    </div>
+
+    <div id="edInfo">
+      Files are stored in this app's local project workspace.
+    </div>
   </div>
 
-  <label for="edHistory">Version history</label>
-  <select id="edHistory">
-    <option value="">No versions yet</option>
-  </select>
+  <input id="edFiles" type="file" multiple hidden>
+</dialog>
 
-  <div class="edButtons">
-    <button id="edRestore" type="button">Restore selected version</button>
-  </div>
-
-  <div id="edInfo">
-    Files are stored in this app's local project workspace.
-  </div>
-</div>
-
-<input id="edFiles" type="file" multiple hidden>
-
-<!-- ---------- JAVASCRIPT LOGIC ---------- -->
+<!-- ---------- Tiny helpers ---------- -->
 <script>
-  let edFiles = {};
-  let edHistory = {};
-  let edCurrent = '';
-  let edEditing = false;
+const $ = id => document.getElementById(id);
 
-  const ED_BUILTINS = ['index.html', 'manifest.json', 'sw.js', 'icon.svg'];
+/* Placeholder stubs – replace with your real implementations.
+   These keep the editor module self-contained and testable. */
+async function idbGet(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); }
+  catch { return null; }
+}
+async function idbPut(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+function toast(msg) {
+  // Simple non-blocking notification; swap for your own toast component.
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+    'background:#000;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:9999';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
 
-  function edIsImage(name) {
-    return /\.(png|jpe?g|gif|webp|svg|ico)$/i.test(name);
+/* Chat state – populated on init; extend as needed. */
+let chats = [];
+let mems = [];
+</script>
+
+<!-- ---------- App Editor module ---------- -->
+<script>
+let edFiles = {};
+let edHistory = {};
+let edCurrent = '';
+let edEditing = false;
+
+const ED_BUILTINS = ['index.html', 'manifest.json', 'sw.js', 'icon.svg'];
+
+function edIsImage(name) {
+  return /\.(png|jpe?g|gif|webp|svg|ico)$/i.test(name);
+}
+
+function edDate(value) {
+  return new Date(value).toLocaleString();
+}
+
+async function edInit() {
+  edFiles = (await idbGet('editorFiles')) || {};
+  edHistory = (await idbGet('editorHistory')) || {};
+
+  for (const name of ED_BUILTINS) {
+    if (edFiles[name]) continue;
+    try {
+      const response = await fetch(name);
+      if (!response.ok) continue;
+      const content = await response.text();
+
+      edFiles[name] = { type: 'text', content, updated: Date.now() };
+
+      if (!edHistory[name]) edHistory[name] = [];
+      edHistory[name].push({
+        version: 1, date: Date.now(), type: 'text', content
+      });
+    } catch (e) {
+      // A file that cannot be fetched can still be imported manually.
+    }
   }
 
-  function edDate(value) {
-    return new Date(value).toLocaleString();
+  await edSaveStorage();
+  edRefreshFiles();
+}
+
+async function edSaveStorage() {
+  await idbPut('editorFiles', edFiles);
+  await idbPut('editorHistory', edHistory);
+}
+
+function edRefreshFiles() {
+  const select = $('edFile');
+  if (!select) return;
+  const previous = edCurrent;
+  select.innerHTML = '';
+
+  Object.keys(edFiles).sort((a, b) => {
+    const ai = ED_BUILTINS.indexOf(a);
+    const bi = ED_BUILTINS.indexOf(b);
+    if (ai !== -1 || bi !== -1) {
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    }
+    return a.localeCompare(b);
+  }).forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = (edIsImage(name) ? '🖼 ' : '📄 ') + name;
+    select.appendChild(option);
+  });
+
+  if (edFiles[previous]) select.value = previous;
+  else if (select.options.length) select.selectedIndex = 0;
+
+  edSelectFile();
+}
+
+function edSelectFile() {
+  const fileSelect = $('edFile');
+  if (!fileSelect) return;
+  edCurrent = fileSelect.value;
+  edEditing = false;
+
+  const file = edFiles[edCurrent];
+  const code = $('edCode');
+  const preview = $('edPreview');
+
+  code.value = '';
+  code.readOnly = true;
+  code.style.display = 'block';
+  preview.style.display = 'none';
+  $('edSave').disabled = true;
+  $('edEdit').disabled = !file || edIsImage(edCurrent);
+
+  if (!file) {
+    $('edInfo').textContent = 'No file selected.';
+    edRefreshHistory();
+    return;
   }
 
-  async function edInit() {
-    edFiles = (await idbGet('editorFiles')) || {};
-    edHistory = (await idbGet('editorHistory')) || {};
+  if (edIsImage(edCurrent) || file.type === 'image') {
+    code.style.display = 'none';
+    preview.style.display = 'block';
+    preview.src = file.content;
+    $('edInfo').textContent =
+      'Image file. You can preview, replace, export, and restore previous versions.';
+  } else {
+    code.value = file.content || '';
+    $('edInfo').textContent =
+      'Viewing ' + edCurrent + '. Tap Edit to make changes.';
+  }
 
-    for (const name of ED_BUILTINS) {
-      if (edFiles[name]) continue;
+  edRefreshHistory();
+}
 
-      try {
-        const response = await fetch(name);
-        if (!response.ok) continue;
+function edRefreshHistory() {
+  const select = $('edHistory');
+  if (!select) return;
+  select.innerHTML = '';
 
-        const content = await response.text();
+  const versions = edHistory[edCurrent] || [];
 
-        edFiles[name] = {
-          type: 'text',
-          content,
-          updated: Date.now()
-        };
+  if (!versions.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'No versions saved yet';
+    select.appendChild(option);
+    $('edRestore').disabled = true;
+    return;
+  }
 
-        if (!edHistory[name]) edHistory[name] = [];
-        edHistory[name].push({
-          version: 1,
-          date: Date.now(),
-          type: 'text',
-          content
+  versions.slice().reverse().forEach((version, index) => {
+    const option = document.createElement('option');
+    option.value = String(versions.length - 1 - index);
+    option.textContent =
+      'Version ' + version.version + ' — ' + edDate(version.date);
+    select.appendChild(option);
+  });
+
+  $('edRestore').disabled = false;
+}
+
+function edEdit() {
+  if (!edCurrent || !edFiles[edCurrent] || edIsImage(edCurrent)) return;
+  edEditing = true;
+  $('edCode').readOnly = false;
+  $('edCode').focus();
+  $('edSave').disabled = false;
+  $('edInfo').textContent =
+    'Editing ' + edCurrent + '. Save to create a new version.';
+}
+
+function edCancel() {
+  edSelectFile();
+}
+
+async function edSaveVersion(name, file) {
+  if (!edHistory[name]) edHistory[name] = [];
+  const versions = edHistory[name];
+  const version = versions.length
+    ? versions[versions.length - 1].version + 1
+    : 1;
+
+  const snapshot = {
+    version, date: Date.now(), type: file.type, content: file.content
+  };
+  versions.push(snapshot);
+
+  if (versions.length > 100) versions.shift(); // keep latest 100
+
+  edFiles[name] = {
+    type: file.type, content: file.content, updated: Date.now()
+  };
+
+  await edSaveStorage();
+  edRefreshHistory();
+
+  $('edInfo').textContent =
+    'Saved ' + name + ' as version ' + version +
+    ' on ' + edDate(snapshot.date) + '.';
+}
+
+async function edSave() {
+  if (!edEditing || !edCurrent) return;
+
+  await edSaveVersion(edCurrent, {
+    type: 'text',
+    content: $('edCode').value
+  });
+
+  edEditing = false;
+  $('edCode').readOnly = true;
+  $('edSave').disabled = true;
+  toast('New version saved');
+}
+
+async function edRestore() {
+  const versions = edHistory[edCurrent] || [];
+  const index = Number($('edHistory').value);
+
+  if (!Number.isInteger(index) || !versions[index]) {
+    toast('Choose a version first');
+    return;
+  }
+
+  const old = versions[index];
+  if (!confirm(
+    'Restore version ' + old.version + ' of ' + edCurrent +
+    '? This will create a new version. Your existing history will remain.'
+  )) return;
+
+  await edSaveVersion(edCurrent, { type: old.type, content: old.content });
+  edSelectFile();
+  toast('Previous version restored as a new version');
+}
+
+async function edImportFiles(files) {
+  for (const file of files) {
+    try {
+      let content, type;
+
+      if (file.type.startsWith('image/')) {
+        content = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
-      } catch (e) {
-        // A file that cannot be fetched can still be imported manually.
+        type = 'image';
+      } else {
+        content = await file.text();
+        type = 'text';
       }
+
+      await edSaveVersion(file.name, { type, content });
+    } catch (error) {
+      alert('Could not import ' + file.name + ': ' + error.message);
     }
-
-    await edSaveStorage();
-    edRefreshFiles();
   }
 
-  async function edSaveStorage() {
-    await idbPut('editorFiles', edFiles);
-    await idbPut('editorHistory', edHistory);
-  }
+  edRefreshFiles();
+  toast('Files imported');
+}
 
-  function edRefreshFiles() {
-    const select = document.getElementById('edFile');
-    if (!select) return;
-    const previous = edCurrent;
-    select.innerHTML = '';
+function edDownload(name, content, type) {
+  const blob = new Blob([content], {
+    type: type || 'application/octet-stream'
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
 
-    Object.keys(edFiles).sort((a, b) => {
-      const ai = ED_BUILTINS.indexOf(a);
-      const bi = ED_BUILTINS.indexOf(b);
-      if (ai !== -1 || bi !== -1) {
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      }
-      return a.localeCompare(b);
-    }).forEach(name => {
-      const option = document.createElement('option');
-      option.value = name;
-      option.textContent = (edIsImage(name) ? '🖼 ' : '📄 ') + name;
-      select.appendChild(option);
-    });
+function edExport() {
+  const file = edFiles[edCurrent];
+  if (!file) return;
 
-    if (edFiles[previous]) select.value = previous;
-    else if (select.options.length) select.selectedIndex = 0;
-
-    edSelectFile();
-  }
-
-  function edSelectFile() {
-    const fileSelect = document.getElementById('edFile');
-    if (!fileSelect) return;
-    edCurrent = fileSelect.value;
-    edEditing = false;
-
-    const file = edFiles[edCurrent];
-    const code = document.getElementById('edCode');
-    const preview = document.getElementById('edPreview');
-
-    code.value = '';
-    code.readOnly = true;
-    code.style.display = 'block';
-    preview.style.display = 'none';
-    document.getElementById('edSave').disabled = true;
-    document.getElementById('edEdit').disabled = !file || edIsImage(edCurrent);
-
-    if (!file) {
-      document.getElementById('edInfo').textContent = 'No file selected.';
-      edRefreshHistory();
-      return;
-    }
-
-    if (edIsImage(edCurrent) || file.type === 'image') {
-      code.style.display = 'none';
-      preview.style.display = 'block';
-      preview.src = file.content;
-      document.getElementById('edInfo').textContent =
-        'Image file. You can preview, replace, export, and restore previous versions.';
-    } else {
-      code.value = file.content || '';
-      document.getElementById('edInfo').textContent =
-        'Viewing ' + edCurrent + '. Tap Edit to make changes.';
-    }
-
-    edRefreshHistory();
-  }
-
-  function edRefreshHistory() {
-    const select = document.getElementById('edHistory');
-    if (!select) return;
-    select.innerHTML = '';
-
-    const versions = edHistory[edCurrent] || [];
-
-    if (!versions.length) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = 'No versions saved yet';
-      select.appendChild(option);
-      document.getElementById('edRestore').disabled = true;
-      return;
-    }
-
-    versions.slice().reverse().forEach((version, index) => {
-      const option = document.createElement('option');
-      option.value = String(versions.length - 1 - index);
-      option.textContent =
-        'Version ' + version.version + ' — ' + edDate(version.date);
-      select.appendChild(option);
-    });
-
-    document.getElementById('edRestore').disabled = false;
-  }
-
-  function edEdit() {
-    if (!edCurrent || !edFiles[edCurrent] || edIsImage(edCurrent)) return;
-
-    edEditing = true;
-    document.getElementById('edCode').readOnly = false;
-    document.getElementById('edCode').focus();
-    document.getElementById('edSave').disabled = false;
-    document.getElementById('edInfo').textContent =
-      'Editing ' + edCurrent + '. Save to create a new version.';
-  }
-
-  function edCancel() {
-    edSelectFile();
-  }
-
-  async function edSaveVersion(name, file) {
-    if (!edHistory[name]) edHistory[name] = [];
-
-    const versions = edHistory[name];
-    const version = versions.length
-      ? versions[versions.length - 1].version + 1
-      : 1;
-
-    const snapshot = {
-      version,
-      date: Date.now(),
-      type: file.type,
-      content: file.content
-    };
-
-    versions.push(snapshot);
-
-    if (versions.length > 100) versions.shift();
-
-    edFiles[name] = {
-      type: file.type,
-      content: file.content,
-      updated: Date.now()
-    };
-
-    await edSaveStorage();
-    edRefreshHistory();
-
-    document.getElementById('edInfo').textContent =
-      'Saved ' + name + ' as version ' + version +
-      ' on ' + edDate(snapshot.date) + '.';
-  }
-
-  async function edSave() {
-    if (!edEditing || !edCurrent) return;
-
-    await edSaveVersion(edCurrent, {
-      type: 'text',
-      content: document.getElementById('edCode').value
-    });
-
-    edEditing = false;
-    document.getElementById('edCode').readOnly = true;
-    document.getElementById('edSave').disabled = true;
-    if (typeof toast === 'function') toast('New version saved');
-  }
-
-  async function edRestore() {
-    const versions = edHistory[edCurrent] || [];
-    const index = Number(document.getElementById('edHistory').value);
-
-    if (!Number.isInteger(index) || !versions[index]) {
-      if (typeof toast === 'function') toast('Choose a version first');
-      return;
-    }
-
-    const old = versions[index];
-
-    if (!confirm(
-      'Restore version ' + old.version + ' of ' + edCurrent +
-      '? This will create a new version. Your existing history will remain.'
-    )) return;
-
-    await edSaveVersion(edCurrent, {
-      type: old.type,
-      content: old.content
-    });
-
-    edSelectFile();
-    if (typeof toast === 'function') toast('Previous version restored as a new version');
-  }
-
-  async function edImportFiles(files) {
-    for (const file of files) {
-      try {
-        let content, type;
-
-        if (file.type.startsWith('image/')) {
-          content = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          type = 'image';
-        } else {
-          content = await file.text();
-          type = 'text';
-        }
-
-        await edSaveVersion(file.name, { type, content });
-      } catch (error) {
-        alert('Could not import ' + file.name + ': ' + error.message);
-      }
-    }
-
-    edRefreshFiles();
-    if (typeof toast === 'function') toast('Files imported');
-  }
-
-  function edDownload(name, content, type) {
-    const blob = new Blob([content], {
-      type: type || 'application/octet-stream'
-    });
-    const url = URL.createObjectURL(blob);
+  if (file.type === 'image' && file.content.startsWith('data:')) {
     const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
+    a.href = file.content;
+    a.download = edCurrent;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  } else {
+    edDownload(edCurrent, file.content, 'text/plain');
   }
+}
 
-  function edExport() {
-    const file = edFiles[edCurrent];
-    if (!file) return;
+function edExportAll() {
+  const backup = {
+    appName: localStorage.getItem('appName') || 'MyChat',
+    files: edFiles,
+    history: edHistory,
+    exported: new Date().toISOString()
+  };
+  edDownload(
+    'mychat-project-backup.json',
+    JSON.stringify(backup, null, 2),
+    'application/json'
+  );
+}
 
-    if (file.type === 'image' && file.content.startsWith('data:')) {
-      const a = document.createElement('a');
-      a.href = file.content;
-      a.download = edCurrent;
-      a.click();
-    } else {
-      edDownload(edCurrent, file.content, 'text/plain');
-    }
-  }
+async function edChangeAppName(name) {
+  name = name.trim().slice(0, 60);
+  if (!name) name = 'MyChat';
 
-  function edExportAll() {
-    const backup = {
-      appName: localStorage.getItem('appName') || 'MyChat',
-      files: edFiles,
-      history: edHistory,
-      exported: new Date().toISOString()
-    };
+  localStorage.setItem('appName', name);
+  document.title = name;
 
-    edDownload(
-      'mychat-project-backup.json',
-      JSON.stringify(backup, null, 2),
-      'application/json'
-    );
-  }
+  const titleEl = $('appTitle');
+  if (titleEl) titleEl.textContent = name;
+  const sideTitle = document.querySelector('#side .sh span');
+  if (sideTitle) sideTitle.textContent = name;
 
-  async function edChangeAppName(name) {
-    name = name.trim().slice(0, 60);
-    if (!name) name = 'MyChat';
-
-    localStorage.setItem('appName', name);
-    document.title = name;
-
-    const sideTitle = document.querySelector('#side .sh span');
-    if (sideTitle) sideTitle.textContent = name;
-
-    let manifest = edFiles['manifest.json'];
-
-    if (manifest && manifest.type === 'text') {
-      try {
-        const data = JSON.parse(manifest.content);
-        data.name = name;
-        data.short_name = name;
-        await edSaveVersion('manifest.json', {
-          type: 'text',
-          content: JSON.stringify(data, null, 2)
-        });
-      } catch (e) {
-        const infoEl = document.getElementById('edInfo');
-        if (infoEl) {
-          infoEl.textContent =
-            'App name changed, but manifest.json could not be updated because it contains invalid JSON.';
-        }
+  const manifest = edFiles['manifest.json'];
+  if (manifest && manifest.type === 'text') {
+    try {
+      const data = JSON.parse(manifest.content);
+      data.name = name;
+      data.short_name = name;
+      await edSaveVersion('manifest.json', {
+        type: 'text',
+        content: JSON.stringify(data, null, 2)
+      });
+    } catch (e) {
+      const infoEl = $('edInfo');
+      if (infoEl) {
+        infoEl.textContent =
+          'App name changed, but manifest.json could not be updated because it contains invalid JSON.';
       }
     }
-
-    if (typeof toast === 'function') toast('App name changed');
   }
 
-  document.getElementById('edFile').onchange = edSelectFile;
-  document.getElementById('edEdit').onclick = edEdit;
-  document.getElementById('edSave').onclick = edSave;
-  document.getElementById('edCancel').onclick = edCancel;
-  document.getElementById('edRestore').onclick = edRestore;
-  document.getElementById('edImport').onclick = () => document.getElementById('edFiles').click();
-  document.getElementById('edFiles').onchange = async e => {
-    await edImportFiles(e.target.files);
-    e.target.value = '';
-  };
-  document.getElementById('edExport').onclick = edExport;
-  document.getElementById('edExportAll').onclick = edExportAll;
+  toast('App name changed');
+}
+</script>
 
-  document.getElementById('edHistory').onchange = () => {
-    const versions = edHistory[edCurrent] || [];
-    const index = Number(document.getElementById('edHistory').value);
-    const version = versions[index];
+<!-- ---------- Event wiring + bootstrap ---------- -->
+<script>
+/* Editor button wiring */
+$('edFile').onchange = edSelectFile;
+$('edEdit').onclick = edEdit;
+$('edSave').onclick = edSave;
+$('edCancel').onclick = edCancel;
+$('edRestore').onclick = edRestore;
+$('edImport').onclick = () => $('edFiles').click();
+$('edFiles').onchange = async e => {
+  await edImportFiles(e.target.files);
+  e.target.value = '';
+};
+$('edExport').onclick = edExport;
+$('edExportAll').onclick = edExportAll;
 
-    if (version) {
-      document.getElementById('edInfo').textContent =
-        'Selected version ' + version.version +
-        ', saved ' + edDate(version.date) + '.';
-    }
-  };
-
-  // Initialize the workspace after the app's database is ready.
-  const sAppNameInput = document.getElementById('sAppName');
-  if (sAppNameInput) {
-    sAppNameInput.value = localStorage.getItem('appName') || 'MyChat';
+$('edHistory').onchange = () => {
+  const versions = edHistory[edCurrent] || [];
+  const index = Number($('edHistory').value);
+  const version = versions[index];
+  if (version) {
+    $('edInfo').textContent =
+      'Selected version ' + version.version +
+      ', saved ' + edDate(version.date) + '.';
   }
+};
 
-  const dSet = document.getElementById('dSet');
-  if (dSet && typeof dSet.close === 'function') {
-    dSet.close();
-  }
+/* Settings dialog wiring */
+const dSetEl = $('dSet');
 
-  if (sAppNameInput) {
-    await edChangeAppName(sAppNameInput.value);
-  }
+$('dSetOpen').onclick = () => {
+  if (typeof dSetEl.showModal === 'function') dSetEl.showModal();
+  else dSetEl.setAttribute('open', '');
+};
 
-  const sSaveBtn = document.getElementById('sSave');
-  if (sSaveBtn) {
-    sSaveBtn.onclick = async () => {
-      if (typeof chats !== 'undefined') chats = (await idbGet('chats')) || [];
-      if (typeof mems !== 'undefined') mems = (await idbGet('mems')) || [];
-      await edInit();
-    };
-  }
+$('sSave').onclick = async () => {
+  await edChangeAppName($('sAppName').value);
+  $('sAppName').value = localStorage.getItem('appName') || 'MyChat';
+  if (typeof dSetEl.close === 'function') dSetEl.close();
+  else dSetEl.removeAttribute('open');
+};
 
+/* ---------- Bootstrap ---------- */
+(async function boot() {
+  // Restore chat/memory state.
+  chats = (await idbGet('chats')) || [];
+  mems  = (await idbGet('mems'))  || [];
+
+  // Populate the app name field before editor init touches the manifest.
   const savedAppName = localStorage.getItem('appName') || 'MyChat';
+  $('sAppName').value = savedAppName;
   document.title = savedAppName;
+  $('appTitle').textContent = savedAppName;
   const sideTitle = document.querySelector('#side .sh span');
   if (sideTitle) sideTitle.textContent = savedAppName;
+
+  // Load the project workspace (fetches built-ins, restores history).
+  await edInit();
+})();
 </script>
+</body>
+</html>
